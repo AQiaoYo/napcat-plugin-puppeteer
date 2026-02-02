@@ -49,23 +49,23 @@ export function initConfigUI(ctx: NapCatPluginContext) {
             </div>
         `),
         // 全局开关
-        ctx.NapCatConfig.boolean('enabled', '启用渲染服务', DEFAULT_CONFIG.enabled, '开启后提供截图渲染 API', true),
+        ctx.NapCatConfig.boolean('enabled', '启用渲染服务', DEFAULT_CONFIG.enabled, '开启后提供截图渲染 API'),
         // 浏览器路径
-        ctx.NapCatConfig.string('browser.executablePath', '浏览器路径', DEFAULT_CONFIG.browser.executablePath || '', '留空则自动检测系统 Chrome/Edge 路径', true),
+        ctx.NapCatConfig.text('browser.executablePath', '浏览器路径', DEFAULT_CONFIG.browser.executablePath || '', '留空则自动检测系统 Chrome/Edge 路径'),
         // 无头模式
-        ctx.NapCatConfig.boolean('browser.headless', '无头模式', DEFAULT_CONFIG.browser.headless ?? true, '是否隐藏浏览器窗口', true),
+        ctx.NapCatConfig.boolean('browser.headless', '无头模式', DEFAULT_CONFIG.browser.headless ?? true, '是否隐藏浏览器窗口'),
         // 最大并发
-        ctx.NapCatConfig.number('browser.maxPages', '最大并发页面数', DEFAULT_CONFIG.browser.maxPages ?? 5, '同时打开的最大页面数', true),
+        ctx.NapCatConfig.text('browser.maxPages', '最大并发页面数', String(DEFAULT_CONFIG.browser.maxPages ?? 5), '同时打开的最大页面数'),
         // 超时时间
-        ctx.NapCatConfig.number('browser.timeout', '默认超时时间 (ms)', DEFAULT_CONFIG.browser.timeout ?? 30000, '页面加载超时时间', true),
+        ctx.NapCatConfig.text('browser.timeout', '默认超时时间 (ms)', String(DEFAULT_CONFIG.browser.timeout ?? 30000), '页面加载超时时间'),
         // 视口宽度
-        ctx.NapCatConfig.number('browser.defaultViewportWidth', '默认视口宽度', DEFAULT_CONFIG.browser.defaultViewportWidth ?? 1280, '截图默认宽度', true),
+        ctx.NapCatConfig.text('browser.defaultViewportWidth', '默认视口宽度', String(DEFAULT_CONFIG.browser.defaultViewportWidth ?? 1280), '截图默认宽度'),
         // 视口高度
-        ctx.NapCatConfig.number('browser.defaultViewportHeight', '默认视口高度', DEFAULT_CONFIG.browser.defaultViewportHeight ?? 800, '截图默认高度', true),
+        ctx.NapCatConfig.text('browser.defaultViewportHeight', '默认视口高度', String(DEFAULT_CONFIG.browser.defaultViewportHeight ?? 800), '截图默认高度'),
         // 设备像素比
-        ctx.NapCatConfig.number('browser.deviceScaleFactor', '设备像素比', DEFAULT_CONFIG.browser.deviceScaleFactor ?? 2, '截图清晰度，推荐 1-3', true),
+        ctx.NapCatConfig.text('browser.deviceScaleFactor', '设备像素比', String(DEFAULT_CONFIG.browser.deviceScaleFactor ?? 2), '截图清晰度，推荐 1-3'),
         // 调试模式
-        ctx.NapCatConfig.boolean('debug', '调试模式', DEFAULT_CONFIG.debug ?? false, '输出详细日志', true),
+        ctx.NapCatConfig.boolean('debug', '调试模式', DEFAULT_CONFIG.debug ?? false, '输出详细日志'),
     );
 
     return schema;
