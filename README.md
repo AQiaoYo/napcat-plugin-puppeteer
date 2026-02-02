@@ -8,7 +8,7 @@ NapCat Puppeteer 渲染服务插件 - 提供 HTML/模板截图渲染 API，供�
 - 📝 **模板语法** - 支持 `{{key}}` 模板变量替换
 - 📐 **灵活配置** - 自定义视口、选择器、图片格式
 - 📄 **分页截图** - 支持长页面自动分页
-- 🔒 **API 认证** - 可选的 Token 认证保护
+- 🔒 **API 认证** - 强制认证密钥保护，首次启动自动生成安全密钥
 - 🌐 **WebUI 管理** - 可视化控制面板
 
 ## 安装
@@ -123,10 +123,15 @@ NapCat Puppeteer 渲染服务插件 - 提供 HTML/模板截图渲染 API，供�
 ## 其他插件调用示例
 
 ```typescript
-// 调用渲染 API
-const response = await fetch('http://localhost:端口/插件名/puppeteer/render', {
+// 调用渲染 API（需要认证密钥）
+const AUTH_TOKEN = '你的认证密钥'; // 从配置页面获取
+
+const response = await fetch('http://localhost:端口/api/Plugin/ext/插件名/puppeteer/render', {
   method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
+  headers: { 
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${AUTH_TOKEN}`  // 认证头
+  },
   body: JSON.stringify({
     html: '<h1>Hello {{name}}</h1>',
     data: { name: 'World' },
@@ -136,6 +141,11 @@ const response = await fetch('http://localhost:端口/插件名/puppeteer/render
 
 const { data } = await response.json();
 // data 是 base64 编码的图片
+
+// 或者使用 Query 参数方式认证
+const response2 = await fetch(
+  `http://localhost:端口/api/Plugin/ext/插件名/puppeteer/screenshot?token=${AUTH_TOKEN}&url=https://example.com`
+);
 ```
 
 ## 配置项
@@ -150,8 +160,33 @@ const { data } = await response.json();
 | browser.defaultViewportWidth | 默认视口宽度 | 1280 |
 | browser.defaultViewportHeight | 默认视口高度 | 800 |
 | browser.deviceScaleFactor | 设备像素比 | 2 |
-| authToken | API 认证 Token | 空 |
+| authToken | API 认证密钥 | 自动生成 64 位安全密钥 |
 | debug | 调试模式 | false |
+
+## API 认证
+
+### 认证机制
+
+所有渲染相关的 API 都需要认证密钥才能访问。插件首次启动时会自动生成一个 64 位的安全密钥，你也可以在 WebUI 配置页面自定义密钥。
+
+### 认证方式
+
+支持两种认证方式：
+
+**1. HTTP Header 方式（推荐）**
+```
+Authorization: Bearer <your-auth-token>
+```
+
+**2. Query 参数方式**
+```
+/puppeteer/screenshot?token=<your-auth-token>&url=...
+```
+
+### 获取认证密钥
+
+- 在 NapCat WebUI 的插件配置页面查看
+- 或在插件的 WebUI 控制台「设置」页面查看和修改
 
 ## 开发
 
