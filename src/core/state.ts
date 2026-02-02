@@ -8,7 +8,7 @@ import path from 'path';
 import type { NapCatPluginContext, PluginLogger } from 'napcat-types/napcat-onebot/network/plugin-manger';
 import type { ActionMap } from 'napcat-types/napcat-onebot/action/index';
 import type { NetworkAdapterConfig } from 'napcat-types/napcat-onebot/config/config';
-import { DEFAULT_CONFIG, getDefaultConfig, DEFAULT_BROWSER_CONFIG } from '../config';
+import { DEFAULT_CONFIG, getDefaultConfig, DEFAULT_BROWSER_CONFIG, generateAuthToken } from '../config';
 import type { PluginConfig, BrowserConfig } from '../types';
 
 /** 日志前缀 */
@@ -38,9 +38,12 @@ function sanitizeConfig(raw: unknown): PluginConfig {
         out.debug = (raw as Record<string, unknown>)['debug'] as boolean;
     }
 
-    // authToken
-    if (typeof (raw as Record<string, unknown>)['authToken'] === 'string') {
-        out.authToken = (raw as Record<string, unknown>)['authToken'] as string;
+    // authToken - 如果为空或不存在，生成新的安全密钥
+    const rawAuthToken = (raw as Record<string, unknown>)['authToken'];
+    if (typeof rawAuthToken === 'string' && rawAuthToken.length > 0) {
+        out.authToken = rawAuthToken;
+    } else {
+        out.authToken = generateAuthToken();
     }
 
     // browser config
