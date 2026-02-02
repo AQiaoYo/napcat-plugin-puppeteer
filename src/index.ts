@@ -30,9 +30,6 @@ import type { ScreenshotOptions } from './types';
 /** 框架配置 UI Schema，NapCat WebUI 会读取此导出来展示配置面板 */
 export let plugin_config_ui: PluginConfigSchema = [];
 
-/** 路由前缀 */
-const ROUTE_PREFIX = '/puppeteer';
-
 /**
  * 解析请求体
  */
@@ -90,17 +87,13 @@ const plugin_init = async (ctx: NapCatPluginContext) => {
         // 注册 WebUI 路由
         try {
             const base = (ctx as any).router;
-            const wrapPath = (p: string) => {
-                if (!p) return ROUTE_PREFIX;
-                return p.startsWith('/') ? `${ROUTE_PREFIX}${p}` : `${ROUTE_PREFIX}/${p}`;
-            };
 
             // 静态资源目录
-            if (base && base.static) base.static(wrapPath('/static'), 'webui');
+            if (base && base.static) base.static('/static', 'webui');
 
             if (base && base.get) {
                 // 插件信息脚本（用于前端获取插件名）
-                base.get(wrapPath('/static/plugin-info.js'), (_req: any, res: any) => {
+                base.get('/static/plugin-info.js', (_req: any, res: any) => {
                     try {
                         res.type('application/javascript');
                         res.send(`window.__PLUGIN_NAME__ = ${JSON.stringify(ctx.pluginName)};`);
@@ -112,12 +105,12 @@ const plugin_init = async (ctx: NapCatPluginContext) => {
                 // ==================== 状态接口 ====================
 
                 // 插件信息
-                base.get(wrapPath('/info'), (_req: any, res: any) => {
+                base.get('/info', (_req: any, res: any) => {
                     res.json({ code: 0, data: { pluginName: ctx.pluginName, version: '1.0.0' } });
                 });
 
                 // 插件状态
-                base.get(wrapPath('/status'), async (_req: any, res: any) => {
+                base.get('/status', async (_req: any, res: any) => {
                     pluginState.logDebug('API 请求: GET /status');
                     try {
                         const browserStatus = await getBrowserStatus();
@@ -137,7 +130,7 @@ const plugin_init = async (ctx: NapCatPluginContext) => {
                 });
 
                 // 浏览器状态
-                base.get(wrapPath('/browser/status'), async (_req: any, res: any) => {
+                base.get('/browser/status', async (_req: any, res: any) => {
                     pluginState.logDebug('API 请求: GET /browser/status');
                     try {
                         const status = await getBrowserStatus();
@@ -150,13 +143,13 @@ const plugin_init = async (ctx: NapCatPluginContext) => {
                 // ==================== 配置接口 ====================
 
                 // 获取配置
-                base.get(wrapPath('/config'), (_req: any, res: any) => {
+                base.get('/config', (_req: any, res: any) => {
                     pluginState.logDebug('API 请求: GET /config');
                     res.json({ code: 0, data: pluginState.getConfig() });
                 });
 
                 // 保存配置
-                base.post && base.post(wrapPath('/config'), async (req: any, res: any) => {
+                base.post && base.post('/config', async (req: any, res: any) => {
                     pluginState.logDebug('API 请求: POST /config');
                     try {
                         const body = await parseRequestBody(req);
@@ -173,7 +166,7 @@ const plugin_init = async (ctx: NapCatPluginContext) => {
                 // ==================== 浏览器控制接口 ====================
 
                 // 启动浏览器
-                base.post && base.post(wrapPath('/browser/start'), async (req: any, res: any) => {
+                base.post && base.post('/browser/start', async (req: any, res: any) => {
                     pluginState.logDebug('API 请求: POST /browser/start');
                     if (!checkAuth(req, res)) return;
                     try {
@@ -189,7 +182,7 @@ const plugin_init = async (ctx: NapCatPluginContext) => {
                 });
 
                 // 关闭浏览器
-                base.post && base.post(wrapPath('/browser/stop'), async (req: any, res: any) => {
+                base.post && base.post('/browser/stop', async (req: any, res: any) => {
                     pluginState.logDebug('API 请求: POST /browser/stop');
                     if (!checkAuth(req, res)) return;
                     try {
@@ -201,7 +194,7 @@ const plugin_init = async (ctx: NapCatPluginContext) => {
                 });
 
                 // 重启浏览器
-                base.post && base.post(wrapPath('/browser/restart'), async (req: any, res: any) => {
+                base.post && base.post('/browser/restart', async (req: any, res: any) => {
                     pluginState.logDebug('API 请求: POST /browser/restart');
                     if (!checkAuth(req, res)) return;
                     try {
@@ -219,7 +212,7 @@ const plugin_init = async (ctx: NapCatPluginContext) => {
                 // ==================== 渲染接口 ====================
 
                 // 截图接口 (GET) - 简单 URL 截图
-                base.get(wrapPath('/screenshot'), async (req: any, res: any) => {
+                base.get('/screenshot', async (req: any, res: any) => {
                     const url = req.query?.url as string;
                     pluginState.logDebug('API 请求: GET /screenshot', { url, query: req.query });
                     if (!checkAuth(req, res)) return;
@@ -265,7 +258,7 @@ const plugin_init = async (ctx: NapCatPluginContext) => {
                 });
 
                 // 截图接口 (POST) - 完整参数
-                base.post && base.post(wrapPath('/screenshot'), async (req: any, res: any) => {
+                base.post && base.post('/screenshot', async (req: any, res: any) => {
                     pluginState.logDebug('API 请求: POST /screenshot');
                     if (!checkAuth(req, res)) return;
 
@@ -316,7 +309,7 @@ const plugin_init = async (ctx: NapCatPluginContext) => {
                 });
 
                 // 渲染 HTML 接口 (POST)
-                base.post && base.post(wrapPath('/render'), async (req: any, res: any) => {
+                base.post && base.post('/render', async (req: any, res: any) => {
                     pluginState.logDebug('API 请求: POST /render');
                     if (!checkAuth(req, res)) return;
 

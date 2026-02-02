@@ -876,8 +876,7 @@
                                         <div class="api-header" onclick="toggleApi(this)">
                                             <div class="flex items-center gap-3 overflow-hidden">
                                                 <span class="method-badge method-POST">POST</span>
-                                                <code
-                                                    class="text-sm font-semibold truncate">/puppeteer/screenshot</code>
+                                                <code class="text-sm font-semibold truncate">/screenshot</code>
                                             </div>
                                             <svg class="w-4 h-4 text-gray-400 transform transition-transform"
                                                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -966,7 +965,7 @@
                                         <div class="api-header" onclick="toggleApi(this)">
                                             <div class="flex items-center gap-3 overflow-hidden">
                                                 <span class="method-badge method-POST">POST</span>
-                                                <code class="text-sm font-semibold truncate">/puppeteer/render</code>
+                                                <code class="text-sm font-semibold truncate">/render</code>
                                             </div>
                                             <svg class="w-4 h-4 text-gray-400 transform -rotate-90 transition-transform"
                                                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1010,8 +1009,7 @@
                                         <div class="api-header" onclick="toggleApi(this)">
                                             <div class="flex items-center gap-3 overflow-hidden">
                                                 <span class="method-badge method-GET">GET</span>
-                                                <code
-                                                    class="text-sm font-semibold truncate">/puppeteer/screenshot</code>
+                                                <code class="text-sm font-semibold truncate">/screenshot</code>
                                             </div>
                                             <svg class="w-4 h-4 text-gray-400 transform -rotate-90 transition-transform"
                                                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1081,8 +1079,7 @@
                                         <div class="api-header" onclick="toggleApi(this)">
                                             <div class="flex items-center gap-3 overflow-hidden">
                                                 <span class="method-badge method-GET">GET</span>
-                                                <code
-                                                    class="text-sm font-semibold truncate">/puppeteer/browser/status</code>
+                                                <code class="text-sm font-semibold truncate">/browser/status</code>
                                             </div>
                                             <svg class="w-4 h-4 text-gray-400 transform -rotate-90 transition-transform"
                                                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1108,8 +1105,7 @@
                                         <div class="api-header" onclick="toggleApi(this)">
                                             <div class="flex items-center gap-3 overflow-hidden">
                                                 <span class="method-badge method-POST">POST</span>
-                                                <code
-                                                    class="text-sm font-semibold truncate">/puppeteer/browser/{action}</code>
+                                                <code class="text-sm font-semibold truncate">/browser/{action}</code>
                                             </div>
                                             <svg class="w-4 h-4 text-gray-400 transform -rotate-90 transition-transform"
                                                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1120,16 +1116,16 @@
                                             <p class="text-sm text-gray-500 my-4">生命周期控制接口，支持 <code>start</code>,
                                                 <code>stop</code>, <code>restart</code>。
                                             </p>
-                                            <div class="flex gap-2 mb-4">
+                                            <div class="flex gap-2 mb-4 flex-wrap">
                                                 <span
                                                     class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-xs font-mono">POST
-                                                    /puppeteer/browser/start</span>
+                                                    /browser/start</span>
                                                 <span
                                                     class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-xs font-mono">POST
-                                                    /puppeteer/browser/stop</span>
+                                                    /browser/stop</span>
                                                 <span
                                                     class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-xs font-mono">POST
-                                                    /puppeteer/browser/restart</span>
+                                                    /browser/restart</span>
                                             </div>
                                             <pre
                                                 class="res-preview">{ "code": 0, "message": "Browser started successfully" }</pre>
@@ -1156,7 +1152,7 @@
                                         <div class="api-header" onclick="toggleApi(this)">
                                             <div class="flex items-center gap-3 overflow-hidden">
                                                 <span class="method-badge method-POST">POST</span>
-                                                <code class="text-sm font-semibold truncate">/puppeteer/config</code>
+                                                <code class="text-sm font-semibold truncate">/config</code>
                                             </div>
                                             <svg class="w-4 h-4 text-gray-400 transform -rotate-90 transition-transform"
                                                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1183,7 +1179,7 @@
                                         <div class="api-header" onclick="toggleApi(this)">
                                             <div class="flex items-center gap-3 overflow-hidden">
                                                 <span class="method-badge method-GET">GET</span>
-                                                <code class="text-sm font-semibold truncate">/puppeteer/status</code>
+                                                <code class="text-sm font-semibold truncate">/status</code>
                                             </div>
                                             <svg class="w-4 h-4 text-gray-400 transform -rotate-90 transition-transform"
                                                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1404,7 +1400,6 @@
 
     <script>
         // === Core Logic ===
-        const ROUTE_PREFIX = '/puppeteer';
 
         // 从 localStorage 获取 token（NapCat WebUI 鉴权方式）
         function getToken() {
@@ -1417,9 +1412,9 @@
             return h;
         }
 
-        // 构建 URL（不再需要在 URL 中传递 token）
+        // 构建 URL
         function buildUrl(base, path) {
-            const url = new URL(base + ROUTE_PREFIX + path, window.location.origin);
+            const url = new URL(base + path, window.location.origin);
             return url.toString();
         }
 
