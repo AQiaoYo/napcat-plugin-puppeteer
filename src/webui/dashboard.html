@@ -391,10 +391,79 @@
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
             background: rgba(156, 163, 175, 0.8);
         }
+
+        /* Toast 消息弹窗 */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+            pointer-events: none;
+        }
+
+        .toast {
+            padding: 12px 24px;
+            border-radius: 12px;
+            color: white;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            animation: toastIn 0.5s var(--ease-spring) both;
+            backdrop-filter: blur(8px);
+            pointer-events: auto;
+        }
+
+        .toast.hiding {
+            animation: toastOut 0.4s var(--ease-smooth) both;
+        }
+
+        .toast.toast-success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+
+        .toast.toast-error {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+
+        .toast.toast-info {
+            background: linear-gradient(135deg, #FB7299 0%, #e05a80 100%);
+        }
+
+        .toast.toast-warning {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        }
+
+        @keyframes toastIn {
+            from {
+                opacity: 0;
+                transform: translateX(100%) scale(0.8);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0) scale(1);
+            }
+        }
+
+        @keyframes toastOut {
+            from {
+                opacity: 1;
+                transform: translateX(0) scale(1);
+            }
+
+            to {
+                opacity: 0;
+                transform: translateX(100%) scale(0.8);
+            }
+        }
     </style>
 </head>
 
 <body class="bg-gray-50 dark:bg-[#18191C] text-gray-800 dark:text-gray-200 transition-colors duration-300">
+    <!-- Toast 容器 -->
+    <div id="toast-container" class="toast-container"></div>
+
     <div class="flex h-screen overflow-hidden">
         <!-- Sidebar -->
         <aside
@@ -486,10 +555,43 @@
                         <h2 class="text-2xl font-bold" id="pageTitle">运行状态</h2>
                         <p class="text-gray-500 text-sm mt-1" id="pageDesc">查看插件和服务概览</p>
                     </div>
-                    <div
+                    <!-- 默认状态指示器 -->
+                    <div id="headerStatus"
                         class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-[#202124] rounded-full shadow-sm border border-gray-100 dark:border-gray-800">
                         <div id="statusDot" class="status-dot disconnected"></div>
                         <span class="text-sm font-medium" id="statusText">连接检查中...</span>
+                    </div>
+                    <!-- 设置页面专用操作栏 -->
+                    <div id="headerSettingsActions" class="hidden items-center gap-3">
+                        <span class="text-xs text-gray-400 flex items-center gap-1">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                                <polyline points="7 3 7 8 15 8"></polyline>
+                            </svg>
+                            自动保存
+                        </span>
+                        <button onclick="loadSettings()"
+                            class="btn text-sm py-1.5 px-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="23 4 23 10 17 10"></polyline>
+                                <polyline points="1 20 1 14 7 14"></polyline>
+                                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                            </svg>
+                            重新加载
+                        </button>
+                        <button onclick="resetSettings()"
+                            class="btn text-sm py-1.5 px-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M3 6h18"></path>
+                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                            </svg>
+                            恢复默认
+                        </button>
                     </div>
                 </header>
 
@@ -564,8 +666,6 @@
                                         停止
                                     </button>
                                 </div>
-                            </div>
-                            <div id="operationResult" class="mt-4 text-sm h-6 rounded p-1 text-center empty:hidden">
                             </div>
                         </div>
 
@@ -1107,6 +1207,29 @@
                     <!-- Page: Settings -->
                     <div id="page-settings" class="page-content">
                         <div class="max-w-3xl mx-auto space-y-6">
+                            <!-- 注意事项 -->
+                            <div
+                                class="glass-card p-4 bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800">
+                                <div class="flex gap-3">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                        class="text-amber-500 flex-shrink-0 mt-0.5">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                                    </svg>
+                                    <div class="text-sm text-amber-800 dark:text-amber-200">
+                                        <p class="font-medium mb-1">注意事项</p>
+                                        <ul
+                                            class="list-disc list-inside text-xs space-y-1 text-amber-700 dark:text-amber-300">
+                                            <li>修改浏览器配置后需要重启浏览器才能生效</li>
+                                            <li>最大页面数设置过高可能导致内存占用过大</li>
+                                            <li>自定义浏览器路径需确保路径正确且有执行权限</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- 浏览器配置 -->
                             <div class="glass-card p-6">
                                 <div class="flex items-center gap-3 mb-6">
@@ -1272,71 +1395,6 @@
                                     </div>
                                 </div>
                             </div>
-
-                            <!-- 操作按钮 -->
-                            <div class="flex justify-between items-center">
-                                <button onclick="resetSettings()"
-                                    class="btn bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M3 6h18"></path>
-                                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-                                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                                    </svg>
-                                    恢复默认
-                                </button>
-                                <div class="flex gap-3">
-                                    <button onclick="loadSettings()"
-                                        class="btn bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200">
-                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-                                            stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                            stroke-linejoin="round">
-                                            <polyline points="23 4 23 10 17 10"></polyline>
-                                            <polyline points="1 20 1 14 7 14"></polyline>
-                                            <path
-                                                d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15">
-                                            </path>
-                                        </svg>
-                                        重新加载
-                                    </button>
-                                    <button onclick="saveSettings()" class="btn btn-primary">
-                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-                                            stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                            stroke-linejoin="round">
-                                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z">
-                                            </path>
-                                            <polyline points="17 21 17 13 7 13 7 21"></polyline>
-                                            <polyline points="7 3 7 8 15 8"></polyline>
-                                        </svg>
-                                        保存配置
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div id="settingsResult" class="text-sm text-center h-6 rounded p-1 empty:hidden"></div>
-
-                            <!-- 配置说明 -->
-                            <div
-                                class="glass-card p-4 bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800">
-                                <div class="flex gap-3">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                                        class="text-amber-500 flex-shrink-0 mt-0.5">
-                                        <circle cx="12" cy="12" r="10"></circle>
-                                        <line x1="12" y1="8" x2="12" y2="12"></line>
-                                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                                    </svg>
-                                    <div class="text-sm text-amber-800 dark:text-amber-200">
-                                        <p class="font-medium mb-1">注意事项</p>
-                                        <ul
-                                            class="list-disc list-inside text-xs space-y-1 text-amber-700 dark:text-amber-300">
-                                            <li>修改浏览器配置后需要重启浏览器才能生效</li>
-                                            <li>最大页面数设置过高可能导致内存占用过大</li>
-                                            <li>自定义浏览器路径需确保路径正确且有执行权限</li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -1433,14 +1491,24 @@
                 'status': ['运行状态', '查看插件和服务概览'],
                 'test': ['渲染测试', '测试 HTML 渲染效果'],
                 'api': ['API 文档', '接口调用参考'],
-                'settings': ['设置', '配置认证密钥和其他选项']
+                'settings': ['设置', '插件配置管理']
             };
             document.getElementById('pageTitle').textContent = docMap[pageId][0];
             document.getElementById('pageDesc').textContent = docMap[pageId][1];
 
-            // Load settings when switching to settings page
+            // Toggle header actions based on page
+            const headerStatus = document.getElementById('headerStatus');
+            const headerSettingsActions = document.getElementById('headerSettingsActions');
+
             if (pageId === 'settings') {
+                headerStatus.classList.add('hidden');
+                headerSettingsActions.classList.remove('hidden');
+                headerSettingsActions.classList.add('flex');
                 loadSettings();
+            } else {
+                headerStatus.classList.remove('hidden');
+                headerSettingsActions.classList.add('hidden');
+                headerSettingsActions.classList.remove('flex');
             }
         }
 
@@ -1496,21 +1564,14 @@
         async function restartBrowser() { await browserAction('restart', '重启'); }
 
         async function browserAction(action, name) {
-            const resultEl = document.getElementById('operationResult');
-            resultEl.textContent = `⏳ 正在${name}浏览器...`;
-            resultEl.className = 'mt-6 text-sm h-6 rounded p-1 bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200';
+            showToast(`正在${name}浏览器...`, 'info');
             try {
                 const data = await authFetch('/browser/' + action, { method: 'POST' });
                 const success = data.code === 0;
-                resultEl.textContent = data.message || (success ? `${name}成功` : `${name}失败`);
-                resultEl.className = success
-                    ? 'mt-6 text-sm h-6 rounded p-1 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200'
-                    : 'mt-6 text-sm h-6 rounded p-1 bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200';
-
+                showToast(data.message || (success ? `${name}成功` : `${name}失败`), success ? 'success' : 'error');
                 setTimeout(fetchStatus, 1000);
             } catch (e) {
-                resultEl.textContent = `${name}失败: ` + e.message;
-                resultEl.className = 'mt-6 text-sm h-6 rounded p-1 bg-red-100 text-red-800';
+                showToast(`${name}失败: ` + e.message, 'error');
             }
         }
 
@@ -1663,6 +1724,19 @@
         updateTestUI();
         setInterval(fetchStatus, 5000);
 
+        // === Toast 消息弹窗 ===
+        function showToast(msg, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = msg;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.add('hiding');
+                setTimeout(() => toast.remove(), 400);
+            }, 3000);
+        }
+
         // === Settings Logic ===
 
         // Default settings values
@@ -1678,6 +1752,9 @@
             defaultHeight: 800,
             defaultScale: 2
         };
+
+        // 防抖保存定时器
+        let saveDebounceTimer = null;
 
         // Load settings from server
         async function loadSettings() {
@@ -1701,15 +1778,52 @@
                     // Other settings
                     document.getElementById('settingsDebug').checked = config.debug || false;
                     document.getElementById('settingsAutoStart').checked = config.autoStart !== false;
+
+                    // 绑定实时保存事件
+                    bindSettingsAutoSave();
                 }
             } catch (e) {
                 console.error('Failed to load settings:', e);
-                showSettingsResult('加载配置失败: ' + e.message, false);
+                showToast('加载配置失败: ' + e.message, 'error');
             }
         }
 
+        // 绑定设置项的自动保存事件
+        function bindSettingsAutoSave() {
+            const inputIds = [
+                'settingsMaxPages', 'settingsLockTimeout', 'settingsExecPath', 'settingsBrowserArgs',
+                'settingsDefaultWidth', 'settingsDefaultHeight', 'settingsDefaultScale'
+            ];
+            const checkboxIds = ['settingsHeadless', 'settingsDebug', 'settingsAutoStart'];
+
+            // 输入框：使用防抖保存
+            inputIds.forEach(id => {
+                const el = document.getElementById(id);
+                if (el && !el.dataset.bound) {
+                    el.dataset.bound = 'true';
+                    el.addEventListener('input', () => debounceSaveSettings());
+                    el.addEventListener('change', () => debounceSaveSettings());
+                }
+            });
+
+            // 复选框：立即保存
+            checkboxIds.forEach(id => {
+                const el = document.getElementById(id);
+                if (el && !el.dataset.bound) {
+                    el.dataset.bound = 'true';
+                    el.addEventListener('change', () => saveSettings(true));
+                }
+            });
+        }
+
+        // 防抖保存
+        function debounceSaveSettings() {
+            if (saveDebounceTimer) clearTimeout(saveDebounceTimer);
+            saveDebounceTimer = setTimeout(() => saveSettings(false), 800);
+        }
+
         // Save settings to server
-        async function saveSettings() {
+        async function saveSettings(showSuccessToast = true) {
             try {
                 const config = {
                     maxPages: parseInt(document.getElementById('settingsMaxPages').value) || defaultSettings.maxPages,
@@ -1739,10 +1853,12 @@
                     body: JSON.stringify(config)
                 });
 
-                showSettingsResult('配置已保存', true);
+                if (showSuccessToast) {
+                    showToast('配置已保存', 'success');
+                }
             } catch (e) {
                 console.error('Failed to save settings:', e);
-                showSettingsResult('保存失败: ' + e.message, false);
+                showToast('保存失败: ' + e.message, 'error');
             }
         }
 
@@ -1761,21 +1877,9 @@
             document.getElementById('settingsDebug').checked = defaultSettings.debug;
             document.getElementById('settingsAutoStart').checked = defaultSettings.autoStart;
 
-            showSettingsResult('已恢复默认值，点击保存生效', true);
-        }
-
-        // Show settings operation result
-        function showSettingsResult(message, success) {
-            const resultEl = document.getElementById('settingsResult');
-            resultEl.textContent = message;
-            resultEl.className = success
-                ? 'text-sm text-center h-6 rounded p-1 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200'
-                : 'text-sm text-center h-6 rounded p-1 bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200';
-
-            setTimeout(() => {
-                resultEl.textContent = '';
-                resultEl.className = 'text-sm text-center h-6 rounded p-1 empty:hidden';
-            }, 3000);
+            // 立即保存恢复后的默认值
+            await saveSettings(false);
+            showToast('已恢复默认配置', 'success');
         }
     </script>
 </body>
