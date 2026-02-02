@@ -1298,10 +1298,10 @@
     <script>
         // === Core Logic ===
         const ROUTE_PREFIX = '/puppeteer';
-        const token = new URLSearchParams(window.location.search).get('webui_token') || '';
+        const webuiToken = new URLSearchParams(window.location.search).get('webui_token') || '';
 
         function authHeaders(h = {}) {
-            if (token) h['Authorization'] = 'Bearer ' + token;
+            if (webuiToken) h['Authorization'] = 'Bearer ' + webuiToken;
             return h;
         }
 
