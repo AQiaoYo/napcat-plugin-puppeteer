@@ -1328,7 +1328,7 @@
             for (const name of [...new Set(tries.filter(Boolean))]) {
                 const base = '/api/Plugin/ext/' + name;
                 try {
-                    const r = await fetch(base + ROUTE_PREFIX + '/status', { headers: authHeaders() });
+                    const r = await fetch(buildUrl(base, '/status'), { headers: authHeaders() });
                     if (r.ok) return base;
                 } catch (e) { }
             }
