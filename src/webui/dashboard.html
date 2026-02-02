@@ -886,18 +886,43 @@
                                                     <line x1="12" y1="17" x2="12.01" y2="17"></line>
                                                 </svg>
                                             </div>
-                                            <div>
-                                                <h4 class="font-bold text-lg mb-2">API 完整路径</h4>
-                                                <p class="text-sm text-gray-500 mb-3">所有 API 的完整调用路径格式为：</p>
-                                                <div
-                                                    class="bg-gray-900 text-gray-100 rounded-lg p-4 font-mono text-sm overflow-x-auto">
-                                                    <span class="text-gray-400">{host}</span><span
-                                                        class="text-green-400">/api/Plugin/ext/napcat-plugin-puppeteer/</span><span
-                                                        class="text-yellow-400">{endpoint}</span>
+                                            <div class="flex-1">
+                                                <h4 class="font-bold text-lg mb-3">API 路径说明</h4>
+
+                                                <!-- 无认证 API -->
+                                                <div class="mb-4">
+                                                    <div class="flex items-center gap-2 mb-2">
+                                                        <span
+                                                            class="px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 text-xs font-bold rounded">推荐</span>
+                                                        <span class="text-sm font-semibold">无认证 API（供其他插件调用）</span>
+                                                    </div>
+                                                    <div
+                                                        class="bg-gray-900 text-gray-100 rounded-lg p-3 font-mono text-sm overflow-x-auto">
+                                                        <span class="text-gray-400">{host}</span><span
+                                                            class="text-green-400">/plugin/napcat-plugin-puppeteer/api</span><span
+                                                            class="text-yellow-400">/{endpoint}</span>
+                                                    </div>
+                                                    <p class="text-xs text-gray-400 mt-1">例如：<code
+                                                            class="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">http://localhost:6099/plugin/napcat-plugin-puppeteer/api/render</code>
+                                                    </p>
                                                 </div>
-                                                <p class="text-xs text-gray-400 mt-2">例如：<code
-                                                        class="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">http://localhost:6099/api/Plugin/ext/napcat-plugin-puppeteer/render</code>
-                                                </p>
+
+                                                <!-- 需认证 API -->
+                                                <div>
+                                                    <div class="flex items-center gap-2 mb-2">
+                                                        <span
+                                                            class="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 text-xs font-bold rounded">WebUI</span>
+                                                        <span class="text-sm font-semibold">需认证 API（WebUI 管理）</span>
+                                                    </div>
+                                                    <div
+                                                        class="bg-gray-900 text-gray-100 rounded-lg p-3 font-mono text-sm overflow-x-auto">
+                                                        <span class="text-gray-400">{host}</span><span
+                                                            class="text-blue-400">/api/Plugin/ext/napcat-plugin-puppeteer</span><span
+                                                            class="text-yellow-400">/{endpoint}</span>
+                                                    </div>
+                                                    <p class="text-xs text-gray-400 mt-1">需要 WebUI 登录 Token，用于配置管理等操作
+                                                    </p>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -916,7 +941,7 @@
                                             </div>
                                             <div class="flex-1 min-w-0">
                                                 <h4 class="font-bold text-lg mb-2">其他插件调用示例</h4>
-                                                <p class="text-sm text-gray-500 mb-4">在 NapCat 插件中调用渲染服务：</p>
+                                                <p class="text-sm text-gray-500 mb-4">在 NapCat 插件中调用渲染服务（使用无认证 API）：</p>
                                             </div>
                                         </div>
 
@@ -927,8 +952,8 @@
                                                     <span class="text-xs font-semibold text-gray-500">/render - HTML
                                                         模板渲染</span>
                                                 </div>
-                                                <pre class="text-xs overflow-x-auto">// 在其他插件中调用
-const response = await fetch('http://localhost:6099/api/Plugin/ext/napcat-plugin-puppeteer/render', {
+                                                <pre class="text-xs overflow-x-auto">// 在其他插件中调用（无需认证）
+const response = await fetch('http://localhost:6099/plugin/napcat-plugin-puppeteer/api/render', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -947,7 +972,7 @@ const result = await response.json();
                                                     <span class="text-xs font-semibold text-gray-500">/screenshot - URL
                                                         截图</span>
                                                 </div>
-                                                <pre class="text-xs overflow-x-auto">const response = await fetch('http://localhost:6099/api/Plugin/ext/napcat-plugin-puppeteer/screenshot', {
+                                                <pre class="text-xs overflow-x-auto">const response = await fetch('http://localhost:6099/plugin/napcat-plugin-puppeteer/api/screenshot', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -1003,7 +1028,11 @@ const result = await response.json();
                                         <div class="api-header" onclick="toggleApi(this)">
                                             <div class="flex items-center gap-3 overflow-hidden">
                                                 <span class="method-badge method-POST">POST</span>
-                                                <code class="text-sm font-semibold truncate">/screenshot</code>
+                                                <div class="flex items-center gap-2">
+                                                    <code class="text-sm font-semibold truncate">/screenshot</code>
+                                                    <span
+                                                        class="px-1.5 py-0.5 rounded text-[10px] bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 font-bold">无认证</span>
+                                                </div>
                                             </div>
                                             <svg class="w-4 h-4 text-gray-400 transform transition-transform"
                                                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1092,7 +1121,11 @@ const result = await response.json();
                                         <div class="api-header" onclick="toggleApi(this)">
                                             <div class="flex items-center gap-3 overflow-hidden">
                                                 <span class="method-badge method-POST">POST</span>
-                                                <code class="text-sm font-semibold truncate">/render</code>
+                                                <div class="flex items-center gap-2">
+                                                    <code class="text-sm font-semibold truncate">/render</code>
+                                                    <span
+                                                        class="px-1.5 py-0.5 rounded text-[10px] bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 font-bold">无认证</span>
+                                                </div>
                                             </div>
                                             <svg class="w-4 h-4 text-gray-400 transform -rotate-90 transition-transform"
                                                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1206,7 +1239,11 @@ const result = await response.json();
                                         <div class="api-header" onclick="toggleApi(this)">
                                             <div class="flex items-center gap-3 overflow-hidden">
                                                 <span class="method-badge method-GET">GET</span>
-                                                <code class="text-sm font-semibold truncate">/browser/status</code>
+                                                <div class="flex items-center gap-2">
+                                                    <code class="text-sm font-semibold truncate">/browser/status</code>
+                                                    <span
+                                                        class="px-1.5 py-0.5 rounded text-[10px] bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 font-bold">无认证</span>
+                                                </div>
                                             </div>
                                             <svg class="w-4 h-4 text-gray-400 transform -rotate-90 transition-transform"
                                                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1232,7 +1269,12 @@ const result = await response.json();
                                         <div class="api-header" onclick="toggleApi(this)">
                                             <div class="flex items-center gap-3 overflow-hidden">
                                                 <span class="method-badge method-POST">POST</span>
-                                                <code class="text-sm font-semibold truncate">/browser/{action}</code>
+                                                <div class="flex items-center gap-2">
+                                                    <code
+                                                        class="text-sm font-semibold truncate">/browser/{action}</code>
+                                                    <span
+                                                        class="px-1.5 py-0.5 rounded text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 font-bold">需认证</span>
+                                                </div>
                                             </div>
                                             <svg class="w-4 h-4 text-gray-400 transform -rotate-90 transition-transform"
                                                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1243,6 +1285,10 @@ const result = await response.json();
                                             <p class="text-sm text-gray-500 my-4">生命周期控制接口，支持 <code>start</code>,
                                                 <code>stop</code>, <code>restart</code>。
                                             </p>
+                                            <div
+                                                class="text-xs p-2 mb-4 bg-amber-50 dark:bg-amber-900/10 text-amber-700 dark:text-amber-400 rounded">
+                                                🔒 此接口需要 WebUI 认证 Token
+                                            </div>
                                             <div class="flex gap-2 mb-4 flex-wrap">
                                                 <span
                                                     class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-xs font-mono">POST
@@ -1279,7 +1325,11 @@ const result = await response.json();
                                         <div class="api-header" onclick="toggleApi(this)">
                                             <div class="flex items-center gap-3 overflow-hidden">
                                                 <span class="method-badge method-POST">POST</span>
-                                                <code class="text-sm font-semibold truncate">/config</code>
+                                                <div class="flex items-center gap-2">
+                                                    <code class="text-sm font-semibold truncate">/config</code>
+                                                    <span
+                                                        class="px-1.5 py-0.5 rounded text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 font-bold">需认证</span>
+                                                </div>
                                             </div>
                                             <svg class="w-4 h-4 text-gray-400 transform -rotate-90 transition-transform"
                                                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1288,6 +1338,10 @@ const result = await response.json();
                                         </div>
                                         <div class="api-body">
                                             <p class="text-sm text-gray-500 my-4">热更新插件配置，实时生效（部分浏览器配置需重启生效）。</p>
+                                            <div
+                                                class="text-xs p-2 mb-4 bg-amber-50 dark:bg-amber-900/10 text-amber-700 dark:text-amber-400 rounded">
+                                                🔒 此接口需要 WebUI 认证 Token
+                                            </div>
                                             <div class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
                                                 Request
                                                 Body</div>
@@ -1306,7 +1360,11 @@ const result = await response.json();
                                         <div class="api-header" onclick="toggleApi(this)">
                                             <div class="flex items-center gap-3 overflow-hidden">
                                                 <span class="method-badge method-GET">GET</span>
-                                                <code class="text-sm font-semibold truncate">/status</code>
+                                                <div class="flex items-center gap-2">
+                                                    <code class="text-sm font-semibold truncate">/status</code>
+                                                    <span
+                                                        class="px-1.5 py-0.5 rounded text-[10px] bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 font-bold">无认证</span>
+                                                </div>
                                             </div>
                                             <svg class="w-4 h-4 text-gray-400 transform -rotate-90 transition-transform"
                                                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1545,32 +1603,43 @@ const result = await response.json();
             return url.toString();
         }
 
-        async function resolveApiBase() {
-            const tries = [];
-            if (window.__PLUGIN_NAME__) tries.push(window.__PLUGIN_NAME__);
+        // 解析插件名
+        function resolvePluginName() {
+            if (window.__PLUGIN_NAME__) return window.__PLUGIN_NAME__;
             try {
-                if (window.parent && window.parent.__PLUGIN_NAME__) tries.push(window.parent.__PLUGIN_NAME__);
+                if (window.parent && window.parent.__PLUGIN_NAME__) return window.parent.__PLUGIN_NAME__;
             } catch (e) { }
-
             const extMatch = location.pathname.match(/\/ext\/([^\/]+)/);
-            if (extMatch) tries.unshift(extMatch[1]);
-            tries.push('napcat-plugin-puppeteer');
-
-            for (const name of [...new Set(tries.filter(Boolean))]) {
-                const base = '/api/Plugin/ext/' + name;
-                try {
-                    const r = await fetch(buildUrl(base, '/status'), { headers: authHeaders() });
-                    if (r.ok) return base;
-                } catch (e) { }
-            }
-            return '/api/Plugin/ext/' + (window.__PLUGIN_NAME__ || 'napcat-plugin-puppeteer');
+            if (extMatch) return extMatch[1];
+            const pluginMatch = location.pathname.match(/\/plugin\/([^\/]+)/);
+            if (pluginMatch) return pluginMatch[1];
+            return 'napcat-plugin-puppeteer';
         }
 
-        let API_BASE_P = resolveApiBase();
+        const PLUGIN_NAME = resolvePluginName();
 
+        // 两种 API 基础路径
+        // 无认证 API（供其他插件调用）: /plugin/{pluginId}/api/
+        // 需认证 API（WebUI 管理）: /api/Plugin/ext/{pluginId}/
+        const API_BASE_NO_AUTH = '/plugin/' + PLUGIN_NAME + '/api';
+        const API_BASE_AUTH = '/api/Plugin/ext/' + PLUGIN_NAME;
+
+        // 无认证 API 请求（用于渲染、状态查询等）
+        async function noAuthFetch(path, options = {}) {
+            const res = await fetch(buildUrl(API_BASE_NO_AUTH, path), {
+                ...options,
+                headers: { 'Content-Type': 'application/json', ...options.headers }
+            });
+            if (!res.ok) {
+                const text = await res.text();
+                throw new Error(text || `HTTP ${res.status}`);
+            }
+            return res.json();
+        }
+
+        // 需认证 API 请求（用于配置管理、浏览器控制等）
         async function authFetch(path, options = {}) {
-            const base = await API_BASE_P;
-            const res = await fetch(buildUrl(base, path), {
+            const res = await fetch(buildUrl(API_BASE_AUTH, path), {
                 ...options,
                 headers: { 'Content-Type': 'application/json', ...options.headers, ...authHeaders() }
             });
@@ -1648,10 +1717,10 @@ const result = await response.json();
         updateTheme();
         window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', updateTheme);
 
-        // Status Logic
+        // Status Logic - 使用无认证 API
         async function fetchStatus() {
             try {
-                const data = await authFetch('/status');
+                const data = await noAuthFetch('/status');
                 if (data.code === 0) {
                     const browser = data.data.browser || {};
 
@@ -1680,7 +1749,7 @@ const result = await response.json();
             }
         }
 
-        // Action Logic
+        // Action Logic - 使用需认证 API（管理操作）
         async function startBrowser() { await browserAction('start', '启动'); }
         async function stopBrowser() { await browserAction('stop', '停止'); }
         async function restartBrowser() { await browserAction('restart', '重启'); }
@@ -1697,7 +1766,7 @@ const result = await response.json();
             }
         }
 
-        // Test Logic
+        // Test Logic - 使用无认证 API（渲染服务）
         async function runTest() {
             const type = document.getElementById('testType').value;
             const content = document.getElementById('testContent').value;
@@ -1752,7 +1821,8 @@ const result = await response.json();
 
                 const endpoint = type === 'html' ? '/render' : '/screenshot';
                 const startTime = Date.now();
-                const result = await authFetch(endpoint, {
+                // 使用无认证 API 进行渲染
+                const result = await noAuthFetch(endpoint, {
                     method: 'POST',
                     body: JSON.stringify(body)
                 });

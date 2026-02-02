@@ -86,288 +86,283 @@ const plugin_init = async (ctx: NapCatPluginContext) => {
 
         // 注册 WebUI 路由
         try {
-            const base = (ctx as any).router;
+            const router = ctx.router;
 
             // 静态资源目录
-            if (base && base.static) base.static('/static', 'webui');
+            if (router && router.static) router.static('/static', 'webui');
 
-            if (base && base.get) {
-                // 插件信息脚本（用于前端获取插件名）
-                base.get('/static/plugin-info.js', (_req: any, res: any) => {
-                    try {
-                        res.type('application/javascript');
-                        res.send(`window.__PLUGIN_NAME__ = ${JSON.stringify(ctx.pluginName)};`);
-                    } catch (e) {
-                        res.status(500).send('// failed to generate plugin-info');
-                    }
-                });
-
-                // ==================== 状态接口 ====================
-
-                // 插件信息
-                base.get('/info', (_req: any, res: any) => {
-                    res.json({ code: 0, data: { pluginName: ctx.pluginName, version: '1.0.0' } });
-                });
-
-                // 插件状态
-                base.get('/status', async (_req: any, res: any) => {
-                    pluginState.logDebug('API 请求: GET /status');
-                    try {
-                        const browserStatus = await getBrowserStatus();
-                        res.json({
-                            code: 0,
-                            data: {
-                                pluginName: pluginState.pluginName,
-                                uptime: pluginState.getUptime(),
-                                uptimeFormatted: pluginState.getUptimeFormatted(),
-                                enabled: pluginState.config.enabled,
-                                browser: browserStatus,
-                            }
-                        });
-                    } catch (e) {
-                        res.status(500).json({ code: -1, message: String(e) });
-                    }
-                });
-
-                // 浏览器状态
-                base.get('/browser/status', async (_req: any, res: any) => {
-                    pluginState.logDebug('API 请求: GET /browser/status');
-                    try {
-                        const status = await getBrowserStatus();
-                        res.json({ code: 0, data: status });
-                    } catch (e) {
-                        res.status(500).json({ code: -1, message: String(e) });
-                    }
-                });
-
-                // ==================== 配置接口 ====================
-
-                // 获取配置
-                base.get('/config', (_req: any, res: any) => {
-                    pluginState.logDebug('API 请求: GET /config');
-                    res.json({ code: 0, data: pluginState.getConfig() });
-                });
-
-                // 保存配置
-                base.post && base.post('/config', async (req: any, res: any) => {
-                    pluginState.logDebug('API 请求: POST /config');
-                    try {
-                        const body = await parseRequestBody(req);
-                        pluginState.logDebug('保存配置内容:', JSON.stringify(body, null, 2));
-                        pluginState.setConfig(ctx, body);
-                        pluginState.log('info', '配置已保存');
-                        res.json({ code: 0, message: 'ok' });
-                    } catch (err) {
-                        pluginState.log('error', '保存配置失败:', err);
-                        res.status(500).json({ code: -1, message: String(err) });
-                    }
-                });
-
-                // ==================== 浏览器控制接口 ====================
-
-                // 启动浏览器
-                base.post && base.post('/browser/start', async (req: any, res: any) => {
-                    pluginState.logDebug('API 请求: POST /browser/start');
-                    if (!checkAuth(req, res)) return;
-                    try {
-                        const success = await initBrowser();
-                        if (success) {
-                            res.json({ code: 0, message: '浏览器已启动' });
-                        } else {
-                            res.status(500).json({ code: -1, message: '启动浏览器失败' });
-                        }
-                    } catch (e) {
-                        res.status(500).json({ code: -1, message: String(e) });
-                    }
-                });
-
-                // 关闭浏览器
-                base.post && base.post('/browser/stop', async (req: any, res: any) => {
-                    pluginState.logDebug('API 请求: POST /browser/stop');
-                    if (!checkAuth(req, res)) return;
-                    try {
-                        await closeBrowser();
-                        res.json({ code: 0, message: '浏览器已关闭' });
-                    } catch (e) {
-                        res.status(500).json({ code: -1, message: String(e) });
-                    }
-                });
-
-                // 重启浏览器
-                base.post && base.post('/browser/restart', async (req: any, res: any) => {
-                    pluginState.logDebug('API 请求: POST /browser/restart');
-                    if (!checkAuth(req, res)) return;
-                    try {
-                        const success = await restartBrowser();
-                        if (success) {
-                            res.json({ code: 0, message: '浏览器已重启' });
-                        } else {
-                            res.status(500).json({ code: -1, message: '重启浏览器失败' });
-                        }
-                    } catch (e) {
-                        res.status(500).json({ code: -1, message: String(e) });
-                    }
-                });
-
-                // ==================== 渲染接口 ====================
-
-                // 截图接口 (GET) - 简单 URL 截图
-                base.get('/screenshot', async (req: any, res: any) => {
-                    const url = req.query?.url as string;
-                    pluginState.logDebug('API 请求: GET /screenshot', { url, query: req.query });
-                    if (!checkAuth(req, res)) return;
-
-                    try {
-                        if (!url) {
-                            return res.status(400).json({ code: -1, message: '缺少 url 参数' });
-                        }
-
-                        const options: ScreenshotOptions = {
-                            file: url,
-                            file_type: 'auto',
-                            encoding: (req.query?.encoding as any) || 'base64',
-                            selector: req.query?.selector as string,
-                            fullPage: req.query?.fullPage === 'true',
-                            type: (req.query?.type as any) || 'png',
-                        };
-
-                        const result = await screenshot(options);
-
-                        if (result.status) {
-                            // 如果请求直接返回图片
-                            if (req.query?.raw === 'true') {
-                                const contentType = options.type === 'jpeg' ? 'image/jpeg' :
-                                    options.type === 'webp' ? 'image/webp' : 'image/png';
-                                res.type(contentType);
-
-                                if (options.encoding === 'base64') {
-                                    res.send(Buffer.from(result.data as string, 'base64'));
-                                } else {
-                                    res.send(result.data);
-                                }
-                            } else {
-                                res.json({ code: 0, data: result.data, time: result.time });
-                            }
-                        } else {
-                            res.status(500).json({ code: -1, message: result.message });
-                        }
-                    } catch (e) {
-                        pluginState.log('error', '截图失败:', e);
-                        res.status(500).json({ code: -1, message: String(e) });
-                    }
-                });
-
-                // 截图接口 (POST) - 完整参数
-                base.post && base.post('/screenshot', async (req: any, res: any) => {
-                    pluginState.logDebug('API 请求: POST /screenshot');
-                    if (!checkAuth(req, res)) return;
-
-                    try {
-                        const body = await parseRequestBody(req);
-                        pluginState.logDebug('截图参数:', JSON.stringify({
-                            file_type: body.file_type,
-                            file_length: body.file?.length,
-                            selector: body.selector,
-                            encoding: body.encoding,
-                            fullPage: body.fullPage,
-                        }, null, 2));
-
-                        if (!body.file) {
-                            return res.status(400).json({ code: -1, message: '缺少 file 参数' });
-                        }
-
-                        const options: ScreenshotOptions = {
-                            file: body.file,
-                            file_type: body.file_type || 'auto',
-                            data: body.data,
-                            selector: body.selector,
-                            type: body.type || 'png',
-                            quality: body.quality,
-                            encoding: body.encoding || 'base64',
-                            fullPage: body.fullPage,
-                            omitBackground: body.omitBackground,
-                            multiPage: body.multiPage,
-                            setViewport: body.setViewport,
-                            pageGotoParams: body.pageGotoParams,
-                            headers: body.headers,
-                            retry: body.retry,
-                            waitForTimeout: body.waitForTimeout,
-                            waitForSelector: body.waitForSelector,
-                        };
-
-                        const result = await screenshot(options);
-
-                        if (result.status) {
-                            res.json({ code: 0, data: result.data, time: result.time });
-                        } else {
-                            res.status(500).json({ code: -1, message: result.message });
-                        }
-                    } catch (e) {
-                        pluginState.log('error', '截图失败:', e);
-                        res.status(500).json({ code: -1, message: String(e) });
-                    }
-                });
-
-                // 渲染 HTML 接口 (POST)
-                base.post && base.post('/render', async (req: any, res: any) => {
-                    pluginState.logDebug('API 请求: POST /render');
-                    if (!checkAuth(req, res)) return;
-
-                    try {
-                        const body = await parseRequestBody(req);
-                        pluginState.logDebug('渲染参数:', JSON.stringify({
-                            has_html: !!body.html,
-                            html_length: body.html?.length,
-                            file: body.file,
-                            selector: body.selector,
-                            data_keys: body.data ? Object.keys(body.data) : [],
-                        }, null, 2));
-
-                        if (!body.html && !body.file) {
-                            return res.status(400).json({ code: -1, message: '缺少 html 或 file 参数' });
-                        }
-
-                        const options: ScreenshotOptions = {
-                            file: body.html || body.file,
-                            file_type: body.html ? 'htmlString' : (body.file_type || 'auto'),
-                            data: body.data,
-                            selector: body.selector || 'body',
-                            type: body.type || 'png',
-                            quality: body.quality,
-                            encoding: body.encoding || 'base64',
-                            fullPage: body.fullPage,
-                            omitBackground: body.omitBackground,
-                            multiPage: body.multiPage,
-                            setViewport: body.setViewport,
-                            pageGotoParams: body.pageGotoParams,
-                            waitForTimeout: body.waitForTimeout,
-                            waitForSelector: body.waitForSelector,
-                        };
-
-                        const result = await screenshot(options);
-
-                        if (result.status) {
-                            res.json({ code: 0, data: result.data, time: result.time });
-                        } else {
-                            res.status(500).json({ code: -1, message: result.message });
-                        }
-                    } catch (e) {
-                        pluginState.log('error', '渲染失败:', e);
-                        res.status(500).json({ code: -1, message: String(e) });
-                    }
-                });
-
-                // 注册仪表盘页面
-                if (base.page) {
-                    base.page({
-                        path: 'puppeteer-dashboard',
-                        title: 'Puppeteer 渲染服务',
-                        icon: '🎨',
-                        htmlFile: 'webui/dashboard.html',
-                        description: '管理 Puppeteer 渲染服务'
-                    });
+            // 插件信息脚本（用于前端获取插件名）
+            router.get('/static/plugin-info.js', (_req: any, res: any) => {
+                try {
+                    res.type('application/javascript');
+                    res.send(`window.__PLUGIN_NAME__ = ${JSON.stringify(ctx.pluginName)};`);
+                } catch (e) {
+                    res.status(500).send('// failed to generate plugin-info');
                 }
-            }
+            });
+
+            // ==================== 无认证 API（供其他插件调用）====================
+            // 路由挂载到 /plugin/{pluginId}/api/，无需 WebUI 登录即可访问
+
+            // 插件信息（无认证）
+            router.getNoAuth('/info', (_req: any, res: any) => {
+                res.json({ code: 0, data: { pluginName: ctx.pluginName, version: '1.0.0' } });
+            });
+
+            // 插件状态（无认证）
+            router.getNoAuth('/status', async (_req: any, res: any) => {
+                pluginState.logDebug('API 请求: GET /status (NoAuth)');
+                try {
+                    const browserStatus = await getBrowserStatus();
+                    res.json({
+                        code: 0,
+                        data: {
+                            pluginName: pluginState.pluginName,
+                            uptime: pluginState.getUptime(),
+                            uptimeFormatted: pluginState.getUptimeFormatted(),
+                            enabled: pluginState.config.enabled,
+                            browser: browserStatus,
+                        }
+                    });
+                } catch (e) {
+                    res.status(500).json({ code: -1, message: String(e) });
+                }
+            });
+
+            // 浏览器状态（无认证）
+            router.getNoAuth('/browser/status', async (_req: any, res: any) => {
+                pluginState.logDebug('API 请求: GET /browser/status (NoAuth)');
+                try {
+                    const status = await getBrowserStatus();
+                    res.json({ code: 0, data: status });
+                } catch (e) {
+                    res.status(500).json({ code: -1, message: String(e) });
+                }
+            });
+
+            // 截图接口 GET（无认证）- 简单 URL 截图
+            router.getNoAuth('/screenshot', async (req: any, res: any) => {
+                const url = req.query?.url as string;
+                pluginState.logDebug('API 请求: GET /screenshot (NoAuth)', { url, query: req.query });
+
+                try {
+                    if (!url) {
+                        return res.status(400).json({ code: -1, message: '缺少 url 参数' });
+                    }
+
+                    const options: ScreenshotOptions = {
+                        file: url,
+                        file_type: 'auto',
+                        encoding: (req.query?.encoding as any) || 'base64',
+                        selector: req.query?.selector as string,
+                        fullPage: req.query?.fullPage === 'true',
+                        type: (req.query?.type as any) || 'png',
+                    };
+
+                    const result = await screenshot(options);
+
+                    if (result.status) {
+                        // 如果请求直接返回图片
+                        if (req.query?.raw === 'true') {
+                            const contentType = options.type === 'jpeg' ? 'image/jpeg' :
+                                options.type === 'webp' ? 'image/webp' : 'image/png';
+                            res.type(contentType);
+
+                            if (options.encoding === 'base64') {
+                                res.send(Buffer.from(result.data as string, 'base64'));
+                            } else {
+                                res.send(result.data);
+                            }
+                        } else {
+                            res.json({ code: 0, data: result.data, time: result.time });
+                        }
+                    } else {
+                        res.status(500).json({ code: -1, message: result.message });
+                    }
+                } catch (e) {
+                    pluginState.log('error', '截图失败:', e);
+                    res.status(500).json({ code: -1, message: String(e) });
+                }
+            });
+
+            // 截图接口 POST（无认证）- 完整参数
+            router.postNoAuth('/screenshot', async (req: any, res: any) => {
+                pluginState.logDebug('API 请求: POST /screenshot (NoAuth)');
+
+                try {
+                    const body = await parseRequestBody(req);
+                    pluginState.logDebug('截图参数:', JSON.stringify({
+                        file_type: body.file_type,
+                        file_length: body.file?.length,
+                        selector: body.selector,
+                        encoding: body.encoding,
+                        fullPage: body.fullPage,
+                    }, null, 2));
+
+                    if (!body.file) {
+                        return res.status(400).json({ code: -1, message: '缺少 file 参数' });
+                    }
+
+                    const options: ScreenshotOptions = {
+                        file: body.file,
+                        file_type: body.file_type || 'auto',
+                        data: body.data,
+                        selector: body.selector,
+                        type: body.type || 'png',
+                        quality: body.quality,
+                        encoding: body.encoding || 'base64',
+                        fullPage: body.fullPage,
+                        omitBackground: body.omitBackground,
+                        multiPage: body.multiPage,
+                        setViewport: body.setViewport,
+                        pageGotoParams: body.pageGotoParams,
+                        headers: body.headers,
+                        retry: body.retry,
+                        waitForTimeout: body.waitForTimeout,
+                        waitForSelector: body.waitForSelector,
+                    };
+
+                    const result = await screenshot(options);
+
+                    if (result.status) {
+                        res.json({ code: 0, data: result.data, time: result.time });
+                    } else {
+                        res.status(500).json({ code: -1, message: result.message });
+                    }
+                } catch (e) {
+                    pluginState.log('error', '截图失败:', e);
+                    res.status(500).json({ code: -1, message: String(e) });
+                }
+            });
+
+            // 渲染 HTML 接口 POST（无认证）
+            router.postNoAuth('/render', async (req: any, res: any) => {
+                pluginState.logDebug('API 请求: POST /render (NoAuth)');
+
+                try {
+                    const body = await parseRequestBody(req);
+                    pluginState.logDebug('渲染参数:', JSON.stringify({
+                        has_html: !!body.html,
+                        html_length: body.html?.length,
+                        file: body.file,
+                        selector: body.selector,
+                        data_keys: body.data ? Object.keys(body.data) : [],
+                    }, null, 2));
+
+                    if (!body.html && !body.file) {
+                        return res.status(400).json({ code: -1, message: '缺少 html 或 file 参数' });
+                    }
+
+                    const options: ScreenshotOptions = {
+                        file: body.html || body.file,
+                        file_type: body.html ? 'htmlString' : (body.file_type || 'auto'),
+                        data: body.data,
+                        selector: body.selector || 'body',
+                        type: body.type || 'png',
+                        quality: body.quality,
+                        encoding: body.encoding || 'base64',
+                        fullPage: body.fullPage,
+                        omitBackground: body.omitBackground,
+                        multiPage: body.multiPage,
+                        setViewport: body.setViewport,
+                        pageGotoParams: body.pageGotoParams,
+                        waitForTimeout: body.waitForTimeout,
+                        waitForSelector: body.waitForSelector,
+                    };
+
+                    const result = await screenshot(options);
+
+                    if (result.status) {
+                        res.json({ code: 0, data: result.data, time: result.time });
+                    } else {
+                        res.status(500).json({ code: -1, message: result.message });
+                    }
+                } catch (e) {
+                    pluginState.log('error', '渲染失败:', e);
+                    res.status(500).json({ code: -1, message: String(e) });
+                }
+            });
+
+            // ==================== 需认证 API（WebUI 管理接口）====================
+            // 路由挂载到 /api/Plugin/ext/{pluginId}/，需要 WebUI 登录
+
+            // 获取配置（需认证）
+            router.get('/config', (_req: any, res: any) => {
+                pluginState.logDebug('API 请求: GET /config');
+                res.json({ code: 0, data: pluginState.getConfig() });
+            });
+
+            // 保存配置（需认证）
+            router.post('/config', async (req: any, res: any) => {
+                pluginState.logDebug('API 请求: POST /config');
+                try {
+                    const body = await parseRequestBody(req);
+                    pluginState.logDebug('保存配置内容:', JSON.stringify(body, null, 2));
+                    pluginState.setConfig(ctx, body);
+                    pluginState.log('info', '配置已保存');
+                    res.json({ code: 0, message: 'ok' });
+                } catch (err) {
+                    pluginState.log('error', '保存配置失败:', err);
+                    res.status(500).json({ code: -1, message: String(err) });
+                }
+            });
+
+            // 启动浏览器（需认证）
+            router.post('/browser/start', async (_req: any, res: any) => {
+                pluginState.logDebug('API 请求: POST /browser/start');
+                try {
+                    const success = await initBrowser();
+                    if (success) {
+                        res.json({ code: 0, message: '浏览器已启动' });
+                    } else {
+                        res.status(500).json({ code: -1, message: '启动浏览器失败' });
+                    }
+                } catch (e) {
+                    res.status(500).json({ code: -1, message: String(e) });
+                }
+            });
+
+            // 关闭浏览器（需认证）
+            router.post('/browser/stop', async (_req: any, res: any) => {
+                pluginState.logDebug('API 请求: POST /browser/stop');
+                try {
+                    await closeBrowser();
+                    res.json({ code: 0, message: '浏览器已关闭' });
+                } catch (e) {
+                    res.status(500).json({ code: -1, message: String(e) });
+                }
+            });
+
+            // 重启浏览器（需认证）
+            router.post('/browser/restart', async (_req: any, res: any) => {
+                pluginState.logDebug('API 请求: POST /browser/restart');
+                try {
+                    const success = await restartBrowser();
+                    if (success) {
+                        res.json({ code: 0, message: '浏览器已重启' });
+                    } else {
+                        res.status(500).json({ code: -1, message: '重启浏览器失败' });
+                    }
+                } catch (e) {
+                    res.status(500).json({ code: -1, message: String(e) });
+                }
+            });
+
+            // 注册仪表盘页面
+            router.page({
+                path: 'puppeteer-dashboard',
+                title: 'Puppeteer 渲染服务',
+                icon: '🎨',
+                htmlFile: 'webui/dashboard.html',
+                description: '管理 Puppeteer 渲染服务'
+            });
+
+            // 输出路由注册信息
+            pluginState.log('info', 'WebUI 路由已注册:');
+            pluginState.log('info', `  - 无认证 API: /plugin/${ctx.pluginName}/api/`);
+            pluginState.log('info', `  - 需认证 API: /api/Plugin/ext/${ctx.pluginName}/`);
+            pluginState.log('info', `  - 扩展页面: /plugin/${ctx.pluginName}/page/puppeteer-dashboard`);
+
         } catch (e) {
             pluginState.log('warn', '注册 WebUI 路由失败', e);
         }
@@ -376,9 +371,7 @@ const plugin_init = async (ctx: NapCatPluginContext) => {
     } catch (error) {
         pluginState.log('error', '插件初始化失败:', error);
     }
-};
-
-/**
+};/**
  * 插件卸载函数
  */
 const plugin_cleanup = async (ctx: NapCatPluginContext) => {
