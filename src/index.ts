@@ -105,9 +105,22 @@ const plugin_init = async (ctx: NapCatPluginContext) => {
                 return p.startsWith('/') ? `${ROUTE_PREFIX}${p}` : `${ROUTE_PREFIX}/${p}`;
             };
 
+            // 静态资源目录
+            if (base && base.static) base.static(wrapPath('/static'), 'webui');
+
             if (base && base.get) {
+                // 插件信息脚本（用于前端获取插件名）
+                base.get(wrapPath('/static/plugin-info.js'), (_req: any, res: any) => {
+                    try {
+                        res.type('application/javascript');
+                        res.send(`window.__PLUGIN_NAME__ = ${JSON.stringify(ctx.pluginName)};`);
+                    } catch (e) {
+                        res.status(500).send('// failed to generate plugin-info');
+                    }
+                });
+
                 // ==================== 状态接口 ====================
-                
+
                 // 插件信息
                 base.get(wrapPath('/info'), (_req: any, res: any) => {
                     res.json({ code: 0, data: { pluginName: ctx.pluginName, version: '1.0.0' } });
@@ -210,7 +223,7 @@ const plugin_init = async (ctx: NapCatPluginContext) => {
                 // 截图接口 (GET) - 简单 URL 截图
                 base.get(wrapPath('/screenshot'), async (req: any, res: any) => {
                     if (!checkAuth(req, res)) return;
-                    
+
                     try {
                         const url = req.query?.url as string;
                         if (!url) {
@@ -231,10 +244,10 @@ const plugin_init = async (ctx: NapCatPluginContext) => {
                         if (result.status) {
                             // 如果请求直接返回图片
                             if (req.query?.raw === 'true') {
-                                const contentType = options.type === 'jpeg' ? 'image/jpeg' : 
-                                                   options.type === 'webp' ? 'image/webp' : 'image/png';
+                                const contentType = options.type === 'jpeg' ? 'image/jpeg' :
+                                    options.type === 'webp' ? 'image/webp' : 'image/png';
                                 res.type(contentType);
-                                
+
                                 if (options.encoding === 'base64') {
                                     res.send(Buffer.from(result.data as string, 'base64'));
                                 } else {
@@ -258,7 +271,7 @@ const plugin_init = async (ctx: NapCatPluginContext) => {
 
                     try {
                         const body = await parseRequestBody(req);
-                        
+
                         if (!body.file) {
                             return res.status(400).json({ code: -1, message: '缺少 file 参数' });
                         }
@@ -301,7 +314,7 @@ const plugin_init = async (ctx: NapCatPluginContext) => {
 
                     try {
                         const body = await parseRequestBody(req);
-                        
+
                         if (!body.html && !body.file) {
                             return res.status(400).json({ code: -1, message: '缺少 html 或 file 参数' });
                         }
@@ -396,8 +409,8 @@ export const plugin_on_config_change = async (
         if (key.startsWith('browser.')) {
             const browserKey = key.replace('browser.', '');
             const currentBrowser = pluginState.config.browser || {};
-            pluginState.setConfig(ctx, { 
-                browser: { ...currentBrowser, [browserKey]: value } 
+            pluginState.setConfig(ctx, {
+                browser: { ...currentBrowser, [browserKey]: value }
             });
         } else {
             pluginState.setConfig(ctx, { [key]: value } as any);
