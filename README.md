@@ -21,28 +21,40 @@ NapCat Puppeteer 渲染服务插件 - 提供 HTML/模板截图渲染 API，供�
 
 ## 快速开始
 
-### API 基础路径
+### API 路径说明
 
-所有 API 的完整调用路径格式为：
+插件提供两种 API 路径：
+
+#### 🟢 无认证 API（推荐，供其他插件调用）
 
 ```
-{NapCat服务地址}/api/Plugin/ext/napcat-plugin-puppeteer{端点}
+{NapCat服务地址}/plugin/napcat-plugin-puppeteer/api/{端点}
 ```
 
 **示例：**
 ```
-http://localhost:6099/api/Plugin/ext/napcat-plugin-puppeteer/render
-http://localhost:6099/api/Plugin/ext/napcat-plugin-puppeteer/screenshot
-http://localhost:6099/api/Plugin/ext/napcat-plugin-puppeteer/status
+http://localhost:6099/plugin/napcat-plugin-puppeteer/api/render
+http://localhost:6099/plugin/napcat-plugin-puppeteer/api/screenshot
+http://localhost:6099/plugin/napcat-plugin-puppeteer/api/status
 ```
 
-> 💡 请将 `localhost:6099` 替换为你实际的 NapCat 服务地址和端口
+> ✅ **推荐使用此路径**，无需认证，适合插件间通信
+
+#### � 需认证 API（WebUI 管理）
+
+```
+{NapCat服务地址}/api/Plugin/ext/napcat-plugin-puppeteer/{端点}
+```
+
+> 需要 WebUI 登录 Token，用于配置管理、浏览器控制等操作
+
+---
 
 ### 最简调用示例
 
 ```javascript
-// 渲染 HTML 并获取截图
-const response = await fetch('http://localhost:6099/api/Plugin/ext/napcat-plugin-puppeteer/render', {
+// 渲染 HTML 并获取截图（使用无认证 API）
+const response = await fetch('http://localhost:6099/plugin/napcat-plugin-puppeteer/api/render', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -55,6 +67,8 @@ const result = await response.json();
 console.log(result.data); // Base64 编码的 PNG 图片
 ```
 
+> 💡 请将 `localhost:6099` 替换为你实际的 NapCat 服务地址和端口
+
 ---
 
 ## API 端点详解
@@ -63,7 +77,7 @@ console.log(result.data); // Base64 编码的 PNG 图片
 
 #### 1. HTML 渲染接口 (POST /render)
 
-**完整路径:** `http://{host}/api/Plugin/ext/napcat-plugin-puppeteer/render`
+**无认证路径:** `http://{host}/plugin/napcat-plugin-puppeteer/api/render`
 
 **描述:** 将 HTML 模板渲染为图片，支持模板变量替换。
 
@@ -85,7 +99,7 @@ console.log(result.data); // Base64 编码的 PNG 图片
 **示例请求:**
 
 ```javascript
-const response = await fetch('http://localhost:6099/api/Plugin/ext/napcat-plugin-puppeteer/render', {
+const response = await fetch('http://localhost:6099/plugin/napcat-plugin-puppeteer/api/render', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -129,7 +143,7 @@ if (result.code === 0) {
 
 #### 2. 通用截图接口 (POST /screenshot)
 
-**完整路径:** `http://{host}/api/Plugin/ext/napcat-plugin-puppeteer/screenshot`
+**无认证路径:** `http://{host}/plugin/napcat-plugin-puppeteer/api/screenshot`
 
 **描述:** 通用截图接口，支持 URL、本地文件路径或 HTML 字符串。
 
@@ -155,7 +169,7 @@ if (result.code === 0) {
 **URL 截图示例:**
 
 ```javascript
-const response = await fetch('http://localhost:6099/api/Plugin/ext/napcat-plugin-puppeteer/screenshot', {
+const response = await fetch('http://localhost:6099/plugin/napcat-plugin-puppeteer/api/screenshot', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -175,7 +189,7 @@ const response = await fetch('http://localhost:6099/api/Plugin/ext/napcat-plugin
 **HTML 字符串截图示例:**
 
 ```javascript
-const response = await fetch('http://localhost:6099/api/Plugin/ext/napcat-plugin-puppeteer/screenshot', {
+const response = await fetch('http://localhost:6099/plugin/napcat-plugin-puppeteer/api/screenshot', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -191,7 +205,7 @@ const response = await fetch('http://localhost:6099/api/Plugin/ext/napcat-plugin
 
 #### 3. 快速 URL 截图 (GET /screenshot)
 
-**完整路径:** `http://{host}/api/Plugin/ext/napcat-plugin-puppeteer/screenshot?url=...`
+**无认证路径:** `http://{host}/plugin/napcat-plugin-puppeteer/api/screenshot?url=...`
 
 **描述:** 通过 Query 参数进行快速 URL 截图，适合调试和简单场景。
 
@@ -208,13 +222,13 @@ const response = await fetch('http://localhost:6099/api/Plugin/ext/napcat-plugin
 **示例:**
 
 ```
-GET http://localhost:6099/api/Plugin/ext/napcat-plugin-puppeteer/screenshot?url=https://example.com&width=1280&height=800
+GET http://localhost:6099/plugin/napcat-plugin-puppeteer/api/screenshot?url=https://example.com&width=1280&height=800
 ```
 
 **直接获取图片流:**
 
 ```
-GET http://localhost:6099/api/Plugin/ext/napcat-plugin-puppeteer/screenshot?url=https://example.com&raw=true
+GET http://localhost:6099/plugin/napcat-plugin-puppeteer/api/screenshot?url=https://example.com&raw=true
 ```
 
 ---
@@ -223,43 +237,23 @@ GET http://localhost:6099/api/Plugin/ext/napcat-plugin-puppeteer/screenshot?url=
 
 #### GET /browser/status
 
+**无认证路径:** `http://{host}/plugin/napcat-plugin-puppeteer/api/browser/status`
+
 获取浏览器连接状态、版本、PID、打开页面数等信息。
 
 ```javascript
-const response = await fetch('http://localhost:6099/api/Plugin/ext/napcat-plugin-puppeteer/browser/status');
+const response = await fetch('http://localhost:6099/plugin/napcat-plugin-puppeteer/api/browser/status');
 const result = await response.json();
 // result.data: { connected, version, pageCount, pid, executablePath }
 ```
 
-#### POST /browser/start
+#### 浏览器管理操作（需认证）
 
-手动启动浏览器实例。
+以下接口需要 WebUI 认证 Token，路径为 `{host}/api/Plugin/ext/napcat-plugin-puppeteer/...`：
 
-```javascript
-await fetch('http://localhost:6099/api/Plugin/ext/napcat-plugin-puppeteer/browser/start', {
-    method: 'POST'
-});
-```
-
-#### POST /browser/stop
-
-关闭浏览器实例及其所有页面。
-
-```javascript
-await fetch('http://localhost:6099/api/Plugin/ext/napcat-plugin-puppeteer/browser/stop', {
-    method: 'POST'
-});
-```
-
-#### POST /browser/restart
-
-重启浏览器实例。
-
-```javascript
-await fetch('http://localhost:6099/api/Plugin/ext/napcat-plugin-puppeteer/browser/restart', {
-    method: 'POST'
-});
-```
+- **POST** `/browser/start` - 启动浏览器
+- **POST** `/browser/stop` - 关闭浏览器
+- **POST** `/browser/restart` - 重启浏览器
 
 ---
 
@@ -267,32 +261,39 @@ await fetch('http://localhost:6099/api/Plugin/ext/napcat-plugin-puppeteer/browse
 
 #### GET /status
 
-获取插件整体统计信息（运行时长、渲染次数、失败次数）。
+**无认证路径:** `http://{host}/plugin/napcat-plugin-puppeteer/api/status`
+
+获取插件整体统计信息（运行时长、渲染次数、失败次数）和公开信息。
 
 ```javascript
-const response = await fetch('http://localhost:6099/api/Plugin/ext/napcat-plugin-puppeteer/status');
+const response = await fetch('http://localhost:6099/plugin/napcat-plugin-puppeteer/api/status');
 const result = await response.json();
 // result.data: { pluginName, uptime, uptimeFormatted, enabled, browser: {...} }
 ```
 
-#### GET /config
+#### GET /config (需认证)
 
 获取当前生效的插件配置。
 
 ```javascript
-const response = await fetch('http://localhost:6099/api/Plugin/ext/napcat-plugin-puppeteer/config');
-const result = await response.json();
-// result.data: { maxPages, lockTimeout, browser: {...}, ... }
+// 需要认证 Token
+const response = await fetch('http://localhost:6099/api/Plugin/ext/napcat-plugin-puppeteer/config', {
+    headers: { 'Authorization': 'Bearer <token>' }
+});
 ```
 
-#### POST /config
+#### POST /config (需认证)
 
 更新插件配置（部分浏览器参数需要重启实例生效）。
 
 ```javascript
+// 需要认证 Token
 await fetch('http://localhost:6099/api/Plugin/ext/napcat-plugin-puppeteer/config', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer <token>' 
+    },
     body: JSON.stringify({
         maxPages: 10,
         debug: true
@@ -328,7 +329,8 @@ interface RenderResponse {
 
 // 封装渲染函数
 async function renderHtml(html: string, data?: Record<string, any>): Promise<string | null> {
-    const API_BASE = 'http://localhost:6099/api/Plugin/ext/napcat-plugin-puppeteer';
+    // 使用无认证 API 路径
+    const API_BASE = 'http://localhost:6099/plugin/napcat-plugin-puppeteer/api';
     
     try {
         const response = await fetch(`${API_BASE}/render`, {
@@ -378,7 +380,8 @@ if (imageBase64) {
 // 在你的 NapCat 插件中
 import type { NapCatPluginContext } from 'napcat-types';
 
-const PUPPETEER_API = 'http://localhost:6099/api/Plugin/ext/napcat-plugin-puppeteer';
+// 使用无认证 API 路径
+const PUPPETEER_API = 'http://localhost:6099/plugin/napcat-plugin-puppeteer/api';
 
 export const plugin_init = async (ctx: NapCatPluginContext) => {
     // 监听消息，生成欢迎图片
