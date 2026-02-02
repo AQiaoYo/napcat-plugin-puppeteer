@@ -141,11 +141,6 @@ const response = await fetch('http://localhost:端口/api/Plugin/ext/插件名/p
 
 const { data } = await response.json();
 // data 是 base64 编码的图片
-
-// 或者使用 Query 参数方式认证
-const response2 = await fetch(
-  `http://localhost:端口/api/Plugin/ext/插件名/puppeteer/screenshot?token=${AUTH_TOKEN}&url=https://example.com`
-);
 ```
 
 ## 配置项
