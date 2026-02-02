@@ -1339,7 +1339,7 @@
 
         async function authFetch(path, options = {}) {
             const base = await API_BASE_P;
-            const res = await fetch(base + ROUTE_PREFIX + path, {
+            const res = await fetch(buildUrl(base, path), {
                 ...options,
                 headers: { 'Content-Type': 'application/json', ...options.headers, ...authHeaders() }
             });
