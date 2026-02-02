@@ -443,6 +443,16 @@
                     </svg>
                     <span>API 文档</span>
                 </div>
+                <div class="sidebar-item" onclick="switchPage('settings', this)">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path
+                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                        </path>
+                    </svg>
+                    <span>设置</span>
+                </div>
             </nav>
 
             <div class="p-4 border-t border-gray-200 dark:border-gray-800">
@@ -1093,6 +1103,193 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Page: Settings -->
+                    <div id="page-settings" class="page-content">
+                        <div class="max-w-3xl mx-auto space-y-6">
+                            <!-- 认证配置 -->
+                            <div class="glass-card p-6">
+                                <div class="flex items-center gap-3 mb-6">
+                                    <div
+                                        class="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center text-red-500">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                            stroke-linejoin="round">
+                                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-bold text-lg">API 认证配置</h3>
+                                        <p class="text-sm text-gray-500">其他插件调用 API 时需要提供此密钥</p>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-4">
+                                    <div>
+                                        <label
+                                            class="text-xs font-semibold text-gray-500 uppercase mb-2 block">认证密钥</label>
+                                        <div class="flex gap-2">
+                                            <div class="relative flex-1">
+                                                <input id="settingsAuthToken" type="password"
+                                                    class="input-field font-mono text-sm pr-10" placeholder="认证密钥" />
+                                                <button onclick="toggleTokenVisibility()"
+                                                    class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                                                    <svg id="tokenEyeIcon" width="18" height="18" viewBox="0 0 24 24"
+                                                        fill="none" stroke="currentColor" stroke-width="2"
+                                                        stroke-linecap="round" stroke-linejoin="round">
+                                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                                        <circle cx="12" cy="12" r="3"></circle>
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                            <button onclick="copyToken()"
+                                                class="btn bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200"
+                                                title="复制密钥">
+                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                                                    stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                                    stroke-linejoin="round">
+                                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1">
+                                                    </path>
+                                                </svg>
+                                            </button>
+                                            <button onclick="generateNewToken()"
+                                                class="btn bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-200 dark:hover:bg-blue-800/50 text-blue-600 dark:text-blue-400"
+                                                title="生成新密钥">
+                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                                                    stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                                    stroke-linejoin="round">
+                                                    <polyline points="23 4 23 10 17 10"></polyline>
+                                                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                        <p class="text-xs text-gray-400 mt-2">💡 首次启动会自动生成安全密钥。点击刷新按钮可生成新密钥。</p>
+                                    </div>
+
+                                    <div
+                                        class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+                                        <div class="flex gap-2">
+                                            <svg class="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" viewBox="0 0 24 24"
+                                                fill="none" stroke="currentColor" stroke-width="2"
+                                                stroke-linecap="round" stroke-linejoin="round">
+                                                <path
+                                                    d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z">
+                                                </path>
+                                                <line x1="12" y1="9" x2="12" y2="13"></line>
+                                                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                                            </svg>
+                                            <div class="text-sm text-amber-800 dark:text-amber-200">
+                                                <p class="font-medium">安全提示</p>
+                                                <p class="mt-1 text-amber-700 dark:text-amber-300">
+                                                    请妥善保管认证密钥，不要泄露给不信任的第三方。修改密钥后，所有使用旧密钥的插件都需要更新。</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 调用示例 -->
+                            <div class="glass-card p-6">
+                                <div class="flex items-center gap-3 mb-6">
+                                    <div
+                                        class="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center text-green-500">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                            stroke-linejoin="round">
+                                            <polyline points="16 18 22 12 16 6"></polyline>
+                                            <polyline points="8 6 2 12 8 18"></polyline>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-bold text-lg">调用示例</h3>
+                                        <p class="text-sm text-gray-500">其他插件如何使用认证密钥调用 API</p>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="text-xs font-semibold text-gray-500 uppercase mb-2 block">方式一：HTTP
+                                            Header（推荐）</label>
+                                        <pre class="text-xs">Authorization: Bearer &lt;your-auth-token&gt;</pre>
+                                    </div>
+                                    <div>
+                                        <label
+                                            class="text-xs font-semibold text-gray-500 uppercase mb-2 block">方式二：Query
+                                            参数</label>
+                                        <pre
+                                            class="text-xs">/puppeteer/screenshot?token=&lt;your-auth-token&gt;&amp;url=...</pre>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 其他设置 -->
+                            <div class="glass-card p-6">
+                                <div class="flex items-center gap-3 mb-6">
+                                    <div
+                                        class="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center text-purple-500">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                            stroke-linejoin="round">
+                                            <circle cx="12" cy="12" r="3"></circle>
+                                            <path
+                                                d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                                            </path>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-bold text-lg">其他设置</h3>
+                                        <p class="text-sm text-gray-500">调试模式等选项</p>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-4">
+                                    <div
+                                        class="flex items-center justify-between p-4 bg-gray-50 dark:bg-[#202124] rounded-lg">
+                                        <div>
+                                            <div class="font-medium">调试模式</div>
+                                            <div class="text-sm text-gray-500">启用后输出详细日志</div>
+                                        </div>
+                                        <label class="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" id="settingsDebug" class="sr-only peer"
+                                                onchange="saveSettings()">
+                                            <div
+                                                class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-pink-300 dark:peer-focus:ring-pink-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary">
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 保存按钮 -->
+                            <div class="flex justify-end gap-3">
+                                <button onclick="loadSettings()"
+                                    class="btn bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="23 4 23 10 17 10"></polyline>
+                                        <polyline points="1 20 1 14 7 14"></polyline>
+                                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15">
+                                        </path>
+                                    </svg>
+                                    重新加载
+                                </button>
+                                <button onclick="saveSettings()" class="btn btn-primary">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z">
+                                        </path>
+                                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                                        <polyline points="7 3 7 8 15 8"></polyline>
+                                    </svg>
+                                    保存配置
+                                </button>
+                            </div>
+
+                            <div id="settingsResult" class="text-sm text-center h-6 rounded p-1 empty:hidden"></div>
+                        </div>
+                    </div>
                 </div>
             </main>
         </div>
@@ -1175,10 +1372,16 @@
             const docMap = {
                 'status': ['运行状态', '查看插件和服务概览'],
                 'test': ['渲染测试', '测试 HTML 渲染效果'],
-                'api': ['API 文档', '接口调用参考']
+                'api': ['API 文档', '接口调用参考'],
+                'settings': ['设置', '配置认证密钥和其他选项']
             };
             document.getElementById('pageTitle').textContent = docMap[pageId][0];
             document.getElementById('pageDesc').textContent = docMap[pageId][1];
+
+            // Load settings when switching to settings page
+            if (pageId === 'settings') {
+                loadSettings();
+            }
         }
 
         // Dark Mode Logic - Follow System
@@ -1399,6 +1602,109 @@
         fetchStatus();
         updateTestUI();
         setInterval(fetchStatus, 5000);
+
+        // === Settings Logic ===
+
+        // Load settings from server
+        async function loadSettings() {
+            try {
+                const data = await authFetch('/config');
+                if (data.code === 0) {
+                    const config = data.data;
+                    document.getElementById('settingsAuthToken').value = config.authToken || '';
+                    document.getElementById('settingsDebug').checked = config.debug || false;
+                }
+            } catch (e) {
+                console.error('Failed to load settings:', e);
+                showSettingsResult('加载配置失败: ' + e.message, false);
+            }
+        }
+
+        // Save settings to server
+        async function saveSettings() {
+            const resultEl = document.getElementById('settingsResult');
+            try {
+                const authToken = document.getElementById('settingsAuthToken').value.trim();
+                const debug = document.getElementById('settingsDebug').checked;
+
+                if (!authToken) {
+                    showSettingsResult('认证密钥不能为空', false);
+                    return;
+                }
+
+                await authFetch('/config', {
+                    method: 'POST',
+                    body: JSON.stringify({ authToken, debug })
+                });
+
+                showSettingsResult('配置已保存', true);
+            } catch (e) {
+                console.error('Failed to save settings:', e);
+                showSettingsResult('保存失败: ' + e.message, false);
+            }
+        }
+
+        // Show settings operation result
+        function showSettingsResult(message, success) {
+            const resultEl = document.getElementById('settingsResult');
+            resultEl.textContent = message;
+            resultEl.className = success
+                ? 'text-sm text-center h-6 rounded p-1 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200'
+                : 'text-sm text-center h-6 rounded p-1 bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200';
+
+            setTimeout(() => {
+                resultEl.textContent = '';
+                resultEl.className = 'text-sm text-center h-6 rounded p-1 empty:hidden';
+            }, 3000);
+        }
+
+        // Toggle token visibility
+        function toggleTokenVisibility() {
+            const input = document.getElementById('settingsAuthToken');
+            const icon = document.getElementById('tokenEyeIcon');
+
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>';
+            } else {
+                input.type = 'password';
+                icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>';
+            }
+        }
+
+        // Copy token to clipboard
+        async function copyToken() {
+            const token = document.getElementById('settingsAuthToken').value;
+            if (!token) {
+                showSettingsResult('没有可复制的密钥', false);
+                return;
+            }
+
+            try {
+                await navigator.clipboard.writeText(token);
+                showSettingsResult('密钥已复制到剪贴板', true);
+            } catch (e) {
+                // Fallback for older browsers
+                const input = document.getElementById('settingsAuthToken');
+                const originalType = input.type;
+                input.type = 'text';
+                input.select();
+                document.execCommand('copy');
+                input.type = originalType;
+                showSettingsResult('密钥已复制到剪贴板', true);
+            }
+        }
+
+        // Generate new random token
+        function generateNewToken() {
+            // Generate 64 character hex string (32 bytes)
+            const array = new Uint8Array(32);
+            crypto.getRandomValues(array);
+            const newToken = Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+
+            document.getElementById('settingsAuthToken').value = newToken;
+            showSettingsResult('已生成新密钥，请点击保存按钮保存', true);
+        }
     </script>
 </body>
 
