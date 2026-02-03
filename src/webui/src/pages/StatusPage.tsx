@@ -27,30 +27,30 @@ export default function StatusPage({ status, onRefresh }: StatusPageProps) {
         <div>
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <div className="glass-card p-6">
-                    <div className="text-gray-500 text-sm mb-2">总渲染次数</div>
-                    <div className="text-3xl font-bold text-primary">{browser?.totalRenders || 0}</div>
+                <div className="glass-card p-6 border-l-4 border-l-primary/60">
+                    <div className="text-gray-500 text-sm mb-2 font-medium">总渲染次数</div>
+                    <div className="text-3xl font-bold text-gray-800 dark:text-gray-100">{browser?.totalRenders || 0}</div>
                 </div>
-                <div className="glass-card p-6">
-                    <div className="text-gray-500 text-sm mb-2">失败次数</div>
-                    <div className="text-3xl font-bold text-red-500">{browser?.failedRenders || 0}</div>
+                <div className="glass-card p-6 border-l-4 border-l-red-500/60">
+                    <div className="text-gray-500 text-sm mb-2 font-medium">失败次数</div>
+                    <div className="text-3xl font-bold text-gray-800 dark:text-gray-100">{browser?.failedRenders || 0}</div>
                 </div>
-                <div className="glass-card p-6">
-                    <div className="text-gray-500 text-sm mb-2">当前页面数</div>
-                    <div className="text-3xl font-bold text-blue-500">{browser?.pageCount || 0}</div>
+                <div className="glass-card p-6 border-l-4 border-l-blue-500/60">
+                    <div className="text-gray-500 text-sm mb-2 font-medium">当前页面数</div>
+                    <div className="text-3xl font-bold text-gray-800 dark:text-gray-100">{browser?.pageCount || 0}</div>
                 </div>
-                <div className="glass-card p-6">
-                    <div className="text-gray-500 text-sm mb-2">运行时长</div>
-                    <div className="text-xl font-bold text-green-500 truncate">{status?.uptimeFormatted || '-'}</div>
+                <div className="glass-card p-6 border-l-4 border-l-green-500/60">
+                    <div className="text-gray-500 text-sm mb-2 font-medium">运行时长</div>
+                    <div className="text-xl font-bold text-gray-800 dark:text-gray-100 truncate pt-2">{status?.uptimeFormatted || '-'}</div>
                 </div>
             </div>
 
             {/* Browser Control */}
             <div className="glass-card p-6 mb-8">
-                <h3 className="font-bold text-lg mb-4">浏览器控制</h3>
+                <h3 className="font-bold text-lg mb-4 text-gray-800 dark:text-gray-100">浏览器控制</h3>
                 <div className="flex flex-col md:flex-row items-center justify-between gap-6">
                     <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center text-primary">
+                        <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center text-primary/80">
                             <Shield size={24} />
                         </div>
                         <div>
@@ -62,23 +62,23 @@ export default function StatusPage({ status, onRefresh }: StatusPageProps) {
                     <div className="flex flex-wrap gap-3">
                         <button
                             onClick={() => browserAction('start', '启动')}
-                            className="btn bg-gray-100 dark:bg-gray-800 hover:bg-green-50 dark:hover:bg-green-900/20 text-gray-700 dark:text-gray-200 hover:text-green-600 dark:hover:text-green-400 border border-gray-200 dark:border-gray-700 hover:border-green-300 dark:hover:border-green-700"
+                            className="btn bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 shadow-sm"
                         >
-                            <Play size={18} />
+                            <Play size={18} className="text-green-500" />
                             启动
                         </button>
                         <button
                             onClick={() => browserAction('restart', '重启')}
-                            className="btn bg-gray-100 dark:bg-gray-800 hover:bg-amber-50 dark:hover:bg-amber-900/20 text-gray-700 dark:text-gray-200 hover:text-amber-600 dark:hover:text-amber-400 border border-gray-200 dark:border-gray-700 hover:border-amber-300 dark:hover:border-amber-700"
+                            className="btn bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 shadow-sm"
                         >
-                            <RotateCcw size={18} />
+                            <RotateCcw size={18} className="text-amber-500" />
                             重启
                         </button>
                         <button
                             onClick={() => browserAction('stop', '停止')}
-                            className="btn bg-gray-100 dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-700 dark:text-gray-200 hover:text-red-600 dark:hover:text-red-400 border border-gray-200 dark:border-gray-700 hover:border-red-300 dark:hover:border-red-700"
+                            className="btn bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 shadow-sm"
                         >
-                            <Square size={18} />
+                            <Square size={18} className="text-red-500" />
                             停止
                         </button>
                     </div>
@@ -87,16 +87,16 @@ export default function StatusPage({ status, onRefresh }: StatusPageProps) {
 
             {/* System Info */}
             <div className="glass-card p-6">
-                <h3 className="font-bold text-lg mb-4">系统信息</h3>
+                <h3 className="font-bold text-lg mb-4 text-gray-800 dark:text-gray-100">系统信息</h3>
                 <div className="grid md:grid-cols-2 gap-4 text-sm">
-                    <div className="flex justify-between p-3 bg-gray-50 dark:bg-[#202124] rounded-lg">
+                    <div className="flex justify-between p-3 bg-gray-50 dark:bg-[#1a1b1d] rounded-lg border border-gray-100 dark:border-gray-800">
                         <span className="text-gray-500">连接状态</span>
-                        <span className={`font-medium flex items-center gap-1 ${browser?.connected ? 'text-green-500' : 'text-red-500'}`}>
+                        <span className={`font-medium flex items-center gap-1 ${browser?.connected ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                             {browser?.connected ? <CheckCircle size={14} /> : <XCircle size={14} />}
                             {browser?.connected ? '已连接' : '未连接'}
                         </span>
                     </div>
-                    <div className="flex justify-between p-3 bg-gray-50 dark:bg-[#202124] rounded-lg">
+                    <div className="flex justify-between p-3 bg-gray-50 dark:bg-[#1a1b1d] rounded-lg border border-gray-100 dark:border-gray-800">
                         <span className="text-gray-500">连接模式</span>
                         <span className={`font-medium flex items-center gap-1 ${browser?.mode === 'remote' ? 'text-blue-500' : 'text-gray-500'}`}>
                             {browser?.mode === 'remote' ? <Globe size={14} /> : <Laptop size={14} />}
@@ -104,14 +104,14 @@ export default function StatusPage({ status, onRefresh }: StatusPageProps) {
                         </span>
                     </div>
 
-                    <div className="flex justify-between p-3 bg-gray-50 dark:bg-[#202124] rounded-lg">
+                    <div className="flex justify-between p-3 bg-gray-50 dark:bg-[#1a1b1d] rounded-lg border border-gray-100 dark:border-gray-800">
                         <span className="text-gray-500">浏览器版本</span>
-                        <span className="font-medium">{browser?.version || '-'}</span>
+                        <span className="font-medium text-gray-800 dark:text-gray-200">{browser?.version || '-'}</span>
                     </div>
-                    <div className="flex justify-between p-3 bg-gray-50 dark:bg-[#202124] rounded-lg">
+                    <div className="flex justify-between p-3 bg-gray-50 dark:bg-[#1a1b1d] rounded-lg border border-gray-100 dark:border-gray-800">
                         <span className="text-gray-500 flex-shrink-0 mr-4">浏览器地址</span>
                         <span
-                            className="font-medium truncate font-mono text-xs"
+                            className="font-medium truncate font-mono text-xs text-gray-800 dark:text-gray-200"
                             title={browser?.mode === 'remote' ? browser?.browserWSEndpoint : browser?.executablePath}
                         >
                             {browser?.mode === 'remote' ? browser?.browserWSEndpoint : browser?.executablePath || '-'}
