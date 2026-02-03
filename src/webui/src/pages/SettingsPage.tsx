@@ -294,107 +294,95 @@ export default function SettingsPage() {
     }
 
     return (
-        <div className="max-w-3xl mx-auto space-y-6">
-            {/* Notice */}
-            <div className="glass-card p-4 bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800">
-                <div className="flex gap-3 items-start">
-                    <AlertCircle size={20} className="text-amber-500 flex-shrink-0 mt-0.5" />
-                    <div className="flex-1 text-sm text-amber-800 dark:text-amber-200">
-                        <p className="font-medium mb-1">注意事项</p>
-                        <ul className="list-disc list-inside text-xs space-y-1 text-amber-700 dark:text-amber-300">
-                            <li>修改浏览器配置后需要重启浏览器才能生效</li>
-                            <li>最大页面数设置过高可能导致内存占用过大</li>
-                            <li>自定义浏览器路径需确保路径正确且有执行权限</li>
-                        </ul>
-                    </div>
-                    {showResetConfirm ? (
-                        <div className="flex-shrink-0 flex items-center gap-2">
-                            <span className="text-xs text-red-600 dark:text-red-400">确认重置?</span>
-                            <button
-                                onClick={doResetSettings}
-                                className="text-xs px-3 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white transition-colors"
-                            >
-                                确认
-                            </button>
-                            <button
-                                onClick={cancelReset}
-                                className="text-xs px-3 py-1.5 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition-colors"
-                            >
-                                取消
-                            </button>
-                        </div>
-                    ) : (
+        <div className="max-w-4xl mx-auto space-y-6 pb-24">
+            {/* Header Actions */}
+            <div className="flex justify-end gap-3 mb-2">
+                {showResetConfirm ? (
+                    <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-4 duration-200">
+                        <span className="text-sm text-red-500 font-medium">确认重置所有配置？</span>
                         <button
-                            onClick={handleResetClick}
-                            className="flex-shrink-0 text-xs px-3 py-1.5 rounded-lg bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-200 dark:hover:bg-amber-800/40 text-amber-700 dark:text-amber-300 transition-colors"
+                            onClick={doResetSettings}
+                            className="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-md text-xs font-bold transition-colors shadow-sm"
                         >
-                            恢复默认
+                            确认重置
                         </button>
-                    )}
-                </div>
+                        <button
+                            onClick={cancelReset}
+                            className="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 px-3 py-1.5 rounded-md text-xs font-bold transition-colors"
+                        >
+                            取消
+                        </button>
+                    </div>
+                ) : (
+                    <button
+                        onClick={handleResetClick}
+                        className="flex items-center gap-1.5 text-gray-500 hover:text-red-500 transition-colors px-3 py-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/10"
+                    >
+                        <AlertCircle size={14} />
+                        <span className="text-xs font-bold">重置配置</span>
+                    </button>
+                )}
             </div>
 
-            {/* Browser Config */}
-            <div className="glass-card p-6">
-                <div className="flex items-center gap-3 mb-6">
-                    <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center text-blue-500">
-                        <Globe size={20} />
-                    </div>
+            {/* Browser Settings */}
+            <div className="bg-white dark:bg-[#1a1b1d] rounded-lg border border-gray-200 dark:border-gray-800 p-6">
+                <div className="flex items-center gap-3 mb-6 border-b border-gray-100 dark:border-gray-800 pb-4">
+                    <Globe size={20} className="text-gray-900 dark:text-gray-100" />
                     <div>
-                        <h3 className="font-bold text-lg">浏览器配置</h3>
-                        <p className="text-sm text-gray-500">Puppeteer 浏览器实例设置</p>
+                        <h3 className="font-bold text-base text-gray-900 dark:text-white">浏览器设置</h3>
+                        <p className="text-xs text-gray-500 mt-0.5">Puppeteer 实例与连接配置</p>
                     </div>
                 </div>
 
-                <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-5">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <div>
-                            <label className="text-xs font-semibold text-gray-500 uppercase mb-2 block">最大页面数</label>
+                            <label className="text-[10px] font-semibold text-gray-500 uppercase mb-1.5 block tracking-wider">最大页面数</label>
                             <input
                                 type="number"
                                 value={config.maxPages}
-                                onChange={(e) => updateConfig('maxPages', parseInt(e.target.value) || 10)}
+                                onChange={(e) => updateConfig('maxPages', parseInt(e.target.value) || 1)}
                                 className="input-field"
                                 placeholder="10"
                                 min={1}
                                 max={50}
                             />
-                            <p className="text-xs text-gray-400 mt-1">同时打开的最大页面数量</p>
+                            <p className="text-[10px] text-gray-400 mt-1">
+                                同时打开的页面上限，超过将排队等待
+                            </p>
                         </div>
                         <div>
-                            <label className="text-xs font-semibold text-gray-500 uppercase mb-2 block">锁定超时 (ms)</label>
+                            <label className="text-[10px] font-semibold text-gray-500 uppercase mb-1.5 block tracking-wider">超时时间 (ms)</label>
                             <input
                                 type="number"
                                 value={config.lockTimeout}
-                                onChange={(e) => updateConfig('lockTimeout', parseInt(e.target.value) || 30000)}
+                                onChange={(e) => updateConfig('lockTimeout', parseInt(e.target.value) || 5000)}
                                 className="input-field"
                                 placeholder="30000"
-                                min={1000}
                                 step={1000}
                             />
-                            <p className="text-xs text-gray-400 mt-1">页面锁定等待超时时间</p>
+                            <p className="text-[10px] text-gray-400 mt-1">
+                                截图任务最大执行时间
+                            </p>
                         </div>
                     </div>
 
                     <div>
-                        <label className="text-xs font-semibold text-gray-500 uppercase mb-2 block">浏览器路径 (可选)</label>
+                        <label className="text-[10px] font-semibold text-gray-500 uppercase mb-1.5 block tracking-wider">本地浏览器路径</label>
                         <input
                             type="text"
                             value={config.executablePath}
                             onChange={(e) => updateConfig('executablePath', e.target.value)}
                             className="input-field font-mono text-sm"
-                            placeholder="留空自动检测系统 Chrome/Edge"
+                            placeholder="C:\Program Files\Google\Chrome\Application\chrome.exe"
                         />
-                        <p className="text-xs text-gray-400 mt-1">自定义 Chrome/Chromium 可执行文件路径</p>
+                        <p className="text-[10px] text-gray-400 mt-1">
+                            留空则尝试自动查找或使用下载的 Chrome
+                        </p>
                     </div>
 
                     <div>
-                        <label className="text-xs font-semibold text-gray-500 uppercase mb-2 block">
-                            <span className="flex items-center gap-2">
-                                远程浏览器地址 (Docker)
-                                <span className="px-2 py-0.5 text-[10px] bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 rounded-full">推荐</span>
-                            </span>
-                        </label>
+                        <label className="text-[10px] font-semibold text-gray-500 uppercase mb-1.5 block tracking-wider">远程浏览器地址 (WebSocket)</label>
                         <input
                             type="text"
                             value={config.browserWSEndpoint}
@@ -402,13 +390,13 @@ export default function SettingsPage() {
                             className="input-field font-mono text-sm"
                             placeholder="ws://chrome:3000 或 ws://localhost:9222/devtools/browser/..."
                         />
-                        <p className="text-xs text-gray-400 mt-1">
+                        <p className="text-[10px] text-gray-400 mt-1">
                             连接远程浏览器的 WebSocket 地址。设置后将忽略本地浏览器路径。
                         </p>
                     </div>
 
                     <div>
-                        <label className="text-xs font-semibold text-gray-500 uppercase mb-2 block">启动参数</label>
+                        <label className="text-[10px] font-semibold text-gray-500 uppercase mb-1.5 block tracking-wider">启动参数</label>
                         <input
                             type="text"
                             value={config.browserArgs}
@@ -416,15 +404,15 @@ export default function SettingsPage() {
                             className="input-field font-mono text-sm"
                             placeholder="--no-sandbox,--disable-setuid-sandbox"
                         />
-                        <p className="text-xs text-gray-400 mt-1">浏览器启动参数，多个参数用逗号分隔</p>
+                        <p className="text-[10px] text-gray-400 mt-1">浏览器启动参数，多个参数用逗号分隔</p>
                     </div>
 
-                    <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-[#202124] rounded-lg">
+                    <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-[#202124] rounded-md border border-gray-100 dark:border-gray-800">
                         <div>
-                            <div className="font-medium">无头模式</div>
-                            <div className="text-sm text-gray-500">隐藏浏览器窗口运行</div>
+                            <div className="font-medium text-sm text-gray-900 dark:text-gray-200">无头模式</div>
+                            <div className="text-xs text-gray-500">隐藏浏览器窗口运行</div>
                         </div>
-                        <label className="toggle-switch">
+                        <label className="toggle-switch scale-90 origin-right">
                             <input
                                 type="checkbox"
                                 checked={config.headless}
@@ -437,21 +425,19 @@ export default function SettingsPage() {
             </div>
 
             {/* Render Defaults */}
-            <div className="glass-card p-6">
-                <div className="flex items-center gap-3 mb-6">
-                    <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center text-green-500">
-                        <Image size={20} />
-                    </div>
+            <div className="bg-white dark:bg-[#1a1b1d] rounded-lg border border-gray-200 dark:border-gray-800 p-6">
+                <div className="flex items-center gap-3 mb-6 border-b border-gray-100 dark:border-gray-800 pb-4">
+                    <Image size={20} className="text-gray-900 dark:text-gray-100" />
                     <div>
-                        <h3 className="font-bold text-lg">渲染默认值</h3>
-                        <p className="text-sm text-gray-500">截图渲染的默认参数</p>
+                        <h3 className="font-bold text-base text-gray-900 dark:text-white">渲染默认值</h3>
+                        <p className="text-xs text-gray-500 mt-0.5">截图渲染的默认参数</p>
                     </div>
                 </div>
 
                 <div className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
-                            <label className="text-xs font-semibold text-gray-500 uppercase mb-2 block">默认宽度</label>
+                            <label className="text-[10px] font-semibold text-gray-500 uppercase mb-1.5 block tracking-wider">默认宽度</label>
                             <input
                                 type="number"
                                 value={config.defaultWidth}
@@ -462,7 +448,7 @@ export default function SettingsPage() {
                             />
                         </div>
                         <div>
-                            <label className="text-xs font-semibold text-gray-500 uppercase mb-2 block">默认高度</label>
+                            <label className="text-[10px] font-semibold text-gray-500 uppercase mb-1.5 block tracking-wider">默认高度</label>
                             <input
                                 type="number"
                                 value={config.defaultHeight}
@@ -473,7 +459,7 @@ export default function SettingsPage() {
                             />
                         </div>
                         <div>
-                            <label className="text-xs font-semibold text-gray-500 uppercase mb-2 block">设备缩放</label>
+                            <label className="text-[10px] font-semibold text-gray-500 uppercase mb-1.5 block tracking-wider">设备缩放</label>
                             <input
                                 type="number"
                                 value={config.defaultScale}
@@ -490,24 +476,22 @@ export default function SettingsPage() {
             </div>
 
             {/* Other Settings */}
-            <div className="glass-card p-6">
-                <div className="flex items-center gap-3 mb-6">
-                    <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center text-purple-500">
-                        <SettingsIcon size={20} />
-                    </div>
+            <div className="bg-white dark:bg-[#1a1b1d] rounded-lg border border-gray-200 dark:border-gray-800 p-6">
+                <div className="flex items-center gap-3 mb-6 border-b border-gray-100 dark:border-gray-800 pb-4">
+                    <SettingsIcon size={20} className="text-gray-900 dark:text-gray-100" />
                     <div>
-                        <h3 className="font-bold text-lg">其他设置</h3>
-                        <p className="text-sm text-gray-500">调试与高级选项</p>
+                        <h3 className="font-bold text-base text-gray-900 dark:text-white">其他设置</h3>
+                        <p className="text-xs text-gray-500 mt-0.5">调试与高级选项</p>
                     </div>
                 </div>
 
-                <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-[#202124] rounded-lg">
+                <div className="space-y-3">
+                    <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-[#202124] rounded-md border border-gray-100 dark:border-gray-800">
                         <div>
-                            <div className="font-medium">调试模式</div>
-                            <div className="text-sm text-gray-500">启用后输出详细日志到控制台</div>
+                            <div className="font-medium text-sm text-gray-900 dark:text-gray-200">调试模式</div>
+                            <div className="text-xs text-gray-500">启用后输出详细日志到控制台</div>
                         </div>
-                        <label className="toggle-switch">
+                        <label className="toggle-switch scale-90 origin-right">
                             <input
                                 type="checkbox"
                                 checked={config.debug}
@@ -517,12 +501,12 @@ export default function SettingsPage() {
                         </label>
                     </div>
 
-                    <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-[#202124] rounded-lg">
+                    <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-[#202124] rounded-md border border-gray-100 dark:border-gray-800">
                         <div>
-                            <div className="font-medium">自动启动浏览器</div>
-                            <div className="text-sm text-gray-500">插件加载时自动启动浏览器实例</div>
+                            <div className="font-medium text-sm text-gray-900 dark:text-gray-200">自动启动浏览器</div>
+                            <div className="text-xs text-gray-500">插件加载时自动启动浏览器实例</div>
                         </div>
-                        <label className="toggle-switch">
+                        <label className="toggle-switch scale-90 origin-right">
                             <input
                                 type="checkbox"
                                 checked={config.autoStart}
@@ -534,15 +518,13 @@ export default function SettingsPage() {
                 </div>
             </div>
 
-            {/* Chrome Setup - 根据平台显示不同内容 */}
-            <div className="glass-card p-6">
-                <div className="flex items-center gap-3 mb-6">
-                    <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center text-purple-500">
-                        <Download size={20} />
-                    </div>
+            {/* Chrome Setup */}
+            <div className="bg-white dark:bg-[#1a1b1d] rounded-lg border border-gray-200 dark:border-gray-800 p-6">
+                <div className="flex items-center gap-3 mb-6 border-b border-gray-100 dark:border-gray-800 pb-4">
+                    <Download size={20} className="text-gray-900 dark:text-gray-100" />
                     <div>
-                        <h3 className="font-bold text-lg">环境管理</h3>
-                        <p className="text-sm text-gray-500">
+                        <h3 className="font-bold text-base text-gray-900 dark:text-white">环境管理</h3>
+                        <p className="text-xs text-gray-500 mt-0.5">
                             {status?.platform === 'win32' ? 'Windows' : status?.platform === 'darwin' ? 'macOS' : 'Linux'}
                             {status?.arch ? ` (${status.arch})` : ''} 环境浏览器管理
                         </p>
@@ -552,20 +534,20 @@ export default function SettingsPage() {
                 {/* 已安装的浏览器列表 */}
                 {status?.installedBrowsers && status.installedBrowsers.length > 0 && (
                     <div className="mb-4">
-                        <label className="text-xs font-semibold text-gray-500 uppercase mb-2 block">
-                            <Monitor size={14} className="inline mr-1" />
+                        <label className="text-[10px] font-semibold text-gray-500 uppercase mb-2 block tracking-wider">
+                            <Monitor size={12} className="inline mr-1 mb-0.5" />
                             系统已安装的浏览器
                         </label>
                         <div className="space-y-2">
                             {status.installedBrowsers.map((browser, index) => (
                                 <div
                                     key={index}
-                                    className="p-3 bg-gray-50 dark:bg-[#202124] rounded-lg border border-gray-200 dark:border-gray-700 flex items-center justify-between"
+                                    className="p-3 bg-gray-50 dark:bg-[#202124] rounded-lg border border-gray-200 dark:border-gray-700 flex items-center justify-between group hover:border-primary/50 transition-colors"
                                 >
                                     <div className="flex items-center gap-3">
-                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold ${browser.type === 'chrome' ? 'bg-blue-500' :
-                                            browser.type === 'edge' ? 'bg-green-500' :
-                                                browser.type === 'brave' ? 'bg-orange-500' :
+                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold shadow-sm ${browser.type === 'chrome' ? 'bg-[#4285F4]' :
+                                            browser.type === 'edge' ? 'bg-[#0078D7]' :
+                                                browser.type === 'brave' ? 'bg-[#FF5500]' :
                                                     'bg-gray-500'
                                             }`}>
                                             {browser.type === 'chrome' ? 'C' :
@@ -573,10 +555,10 @@ export default function SettingsPage() {
                                                     browser.type === 'brave' ? 'B' : 'Cr'}
                                         </div>
                                         <div>
-                                            <div className="font-medium text-sm capitalize">
+                                            <div className="font-medium text-sm capitalize text-gray-900 dark:text-gray-200">
                                                 {browser.type}
                                                 {browser.channel !== 'stable' && (
-                                                    <span className="ml-2 px-1.5 py-0.5 text-[10px] bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400 rounded">
+                                                    <span className="ml-2 px-1.5 py-0.5 text-[10px] bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300 rounded font-bold uppercase">
                                                         {browser.channel}
                                                     </span>
                                                 )}
@@ -588,14 +570,14 @@ export default function SettingsPage() {
                                     </div>
                                     <div className="text-right">
                                         {browser.version && (
-                                            <div className="text-xs text-gray-500">{browser.version}</div>
+                                            <div className="text-xs text-gray-500 mb-1">{browser.version}</div>
                                         )}
                                         <button
                                             onClick={() => {
                                                 updateConfig('executablePath', browser.executablePath)
                                                 showToast('已选择浏览器路径', 'success')
                                             }}
-                                            className="text-xs text-primary hover:underline mt-1"
+                                            className="text-xs font-medium text-primary hover:text-primary/80 opacity-0 group-hover:opacity-100 transition-opacity"
                                         >
                                             使用此浏览器
                                         </button>
@@ -607,12 +589,12 @@ export default function SettingsPage() {
                 )}
 
                 {/* 环境提示 */}
-                <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/10 rounded-lg border border-blue-200 dark:border-blue-800">
+                <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/10 rounded-md border border-blue-100 dark:border-blue-900/20">
                     <div className="flex gap-2 text-sm text-blue-700 dark:text-blue-300">
                         <Info size={16} className="flex-shrink-0 mt-0.5" />
                         <div>
-                            <p className="font-medium">环境说明</p>
-                            <p className="text-xs mt-1 text-blue-600 dark:text-blue-400">
+                            <p className="font-bold text-xs uppercase tracking-wide mb-1">环境说明</p>
+                            <p className="text-xs text-blue-600 dark:text-blue-400 leading-relaxed">
                                 {status?.canInstall ? (
                                     <>
                                         检测到 {status?.platform === 'win32' ? 'Windows' : status?.platform === 'darwin' ? 'macOS' : 'Linux'}
@@ -631,33 +613,33 @@ export default function SettingsPage() {
                     </div>
                 </div>
 
-                {/* 远程浏览器推荐 - 当不支持本地安装时显示 */}
+                {/* 远程浏览器推荐 */}
                 {!status?.canInstall && (
-                    <div className="mb-4 p-4 bg-green-50 dark:bg-green-900/10 rounded-lg border border-green-200 dark:border-green-800">
+                    <div className="mb-4 p-4 bg-green-50 dark:bg-green-900/10 rounded-md border border-green-100 dark:border-green-900/20">
                         <div className="flex gap-3">
-                            <Server size={20} className="text-green-500 flex-shrink-0 mt-0.5" />
+                            <Server size={18} className="text-green-600 dark:text-green-500 flex-shrink-0 mt-0.5" />
                             <div>
-                                <p className="font-medium text-green-700 dark:text-green-300">推荐：使用远程浏览器</p>
-                                <p className="text-xs mt-1 text-green-600 dark:text-green-400">
+                                <p className="font-bold text-xs uppercase tracking-wide mb-1 text-green-700 dark:text-green-300">推荐：使用远程浏览器</p>
+                                <p className="text-xs mt-1 text-green-600 dark:text-green-400 leading-relaxed">
                                     您可以使用 Docker 运行一个独立的 Chrome 容器，然后通过 WebSocket 连接：
                                 </p>
-                                <div className="mt-2 p-2 bg-gray-900 rounded text-xs font-mono text-green-400 overflow-x-auto">
+                                <div className="mt-2 p-2 bg-gray-900 rounded text-xs font-mono text-green-400 overflow-x-auto border border-gray-800">
                                     docker run -d --name chrome -p 3000:3000 browserless/chrome
                                 </div>
                                 <p className="text-xs mt-2 text-green-600 dark:text-green-400">
-                                    然后在上方「远程浏览器地址」填入：<code className="px-1 py-0.5 bg-green-100 dark:bg-green-900/30 rounded">ws://localhost:3000</code>
+                                    然后在上方「远程浏览器地址」填入：<code className="px-1 py-0.5 bg-green-100 dark:bg-green-900/30 rounded font-bold">ws://localhost:3000</code>
                                 </p>
                             </div>
                         </div>
                     </div>
                 )}
 
-                {/* Chrome 安装选项 - 仅在支持安装时显示 */}
+                {/* Chrome 安装选项 */}
                 {status?.canInstall && (
-                    <div className="space-y-4">
+                    <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-gray-800">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label className="text-xs font-semibold text-gray-500 uppercase mb-2 block">Chrome 版本</label>
+                                <label className="text-[10px] font-semibold text-gray-500 uppercase mb-1.5 block tracking-wider">Chrome 版本</label>
                                 <input
                                     type="text"
                                     value={version}
@@ -665,14 +647,13 @@ export default function SettingsPage() {
                                     className="input-field font-mono text-sm"
                                     placeholder={status?.defaultVersion || '131.0.6778.204'}
                                 />
-                                <p className="text-xs text-gray-400 mt-1">留空使用推荐版本</p>
                             </div>
                             <div>
-                                <label className="text-xs font-semibold text-gray-500 uppercase mb-2 block">下载源</label>
+                                <label className="text-[10px] font-semibold text-gray-500 uppercase mb-1.5 block tracking-wider">下载源</label>
                                 <select
                                     value={source}
                                     onChange={(e) => setSource(e.target.value)}
-                                    className="input-field"
+                                    className="input-field text-sm"
                                 >
                                     <option value="NPMMIRROR">NPM 镜像 (国内推荐)</option>
                                     <option value="GOOGLE">Google 官方源</option>
@@ -680,14 +661,13 @@ export default function SettingsPage() {
                             </div>
                         </div>
 
-                        {/* 安装依赖选项 - 仅 Linux 显示 */}
                         {status?.platform === 'linux' && (
-                            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-[#202124] rounded-lg">
+                            <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-[#202124] rounded-md border border-gray-100 dark:border-gray-800">
                                 <div>
-                                    <div className="font-medium">安装系统依赖</div>
-                                    <div className="text-sm text-gray-500">自动安装 Chrome 运行所需的系统库</div>
+                                    <div className="font-medium text-sm text-gray-900 dark:text-gray-200">安装系统依赖</div>
+                                    <div className="text-xs text-gray-500">自动安装 Chrome 运行所需的系统库</div>
                                 </div>
-                                <label className="toggle-switch">
+                                <label className="toggle-switch scale-90 origin-right">
                                     <input
                                         type="checkbox"
                                         checked={installDeps}
@@ -698,16 +678,15 @@ export default function SettingsPage() {
                             </div>
                         )}
 
-                        {/* Progress Bar */}
                         {(isInstalling || progress) && progress?.status !== 'idle' && (
-                            <div>
-                                <div className="mb-2 flex justify-between text-sm">
+                            <div className="p-4 bg-gray-50 dark:bg-black/20 rounded-lg border border-gray-100 dark:border-gray-800">
+                                <div className="mb-2 flex justify-between text-xs font-medium">
                                     <span className="text-gray-600 dark:text-gray-400">{progress?.message || '处理中...'}</span>
                                     <span className="font-mono text-primary">{Math.round(progress?.progress || 0)}%</span>
                                 </div>
-                                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
+                                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
                                     <div
-                                        className={`h-3 rounded-full transition-all duration-300 ${getProgressColor()}`}
+                                        className={`h-2 rounded-full transition-all duration-300 ${getProgressColor()}`}
                                         style={{ width: `${progress?.progress || 0}%` }}
                                     ></div>
                                 </div>
@@ -723,7 +702,7 @@ export default function SettingsPage() {
 
                         <div className="flex gap-3 pt-2">
                             {status?.installed ? (
-                                <div className="flex-1 p-3 bg-green-50 dark:bg-green-900/10 rounded-lg border border-green-200 dark:border-green-800 text-center text-sm text-green-700 dark:text-green-300 flex items-center justify-center gap-2">
+                                <div className="flex-1 p-3 bg-green-50 dark:bg-green-900/10 rounded-md border border-green-200 dark:border-green-800 text-center text-sm font-medium text-green-700 dark:text-green-300 flex items-center justify-center gap-2">
                                     <Check size={16} />
                                     Chrome 已安装 ({status.version})
                                 </div>
@@ -731,9 +710,9 @@ export default function SettingsPage() {
                                 <button
                                     onClick={installChrome}
                                     disabled={isInstalling}
-                                    className="btn btn-primary flex-1 disabled:opacity-50"
+                                    className="btn btn-primary flex-1 disabled:opacity-50 text-sm font-medium py-2.5 shadow-sm"
                                 >
-                                    <Download size={18} />
+                                    <Download size={16} />
                                     立即安装 Chrome
                                 </button>
                             )}
