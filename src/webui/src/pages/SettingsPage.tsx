@@ -518,23 +518,27 @@ export default function SettingsPage() {
                         <div>
                             <h3 className="font-bold text-base text-gray-900 dark:text-white">环境管理</h3>
                             <p className="text-xs text-gray-500 mt-0.5">
-                                {status?.platform === 'win32' ? 'Windows' : status?.platform === 'darwin' ? 'macOS' : 'Linux'}
+                                {status?.platform === 'win32'
+                                    ? (status?.windowsVersion || 'Windows')
+                                    : status?.platform === 'darwin' ? 'macOS' : 'Linux'}
                                 {status?.arch ? ` (${status.arch})` : ''} 环境浏览器管理
                             </p>
                         </div>
                     </div>
 
-                    <button
-                        onClick={uninstallChrome}
-                        className={`btn text-xs px-3 py-1.5 border shadow-none transition-all ${showUninstallConfirm
-                            ? 'bg-red-600 hover:bg-red-700 text-white border-red-600 animate-pulse'
-                            : 'bg-red-50 hover:bg-red-100 dark:bg-red-900/10 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 border-red-200 dark:border-red-900/30'
-                            }`}
-                        title="卸载内置 Chrome（如果浏览器损坏可尝试此操作）"
-                    >
-                        <Trash2 size={14} className="mr-1.5" />
-                        {showUninstallConfirm ? '再次点击确认卸载' : '卸载 Chrome'}
-                    </button>
+                    {status?.canInstall && (
+                        <button
+                            onClick={uninstallChrome}
+                            className={`btn text-xs px-3 py-1.5 border shadow-none transition-all ${showUninstallConfirm
+                                ? 'bg-red-600 hover:bg-red-700 text-white border-red-600 animate-pulse'
+                                : 'bg-red-50 hover:bg-red-100 dark:bg-red-900/10 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 border-red-200 dark:border-red-900/30'
+                                }`}
+                            title="卸载内置 Chrome（如果浏览器损坏可尝试此操作）"
+                        >
+                            <Trash2 size={14} className="mr-1.5" />
+                            {showUninstallConfirm ? '再次点击确认卸载' : '卸载 Chrome'}
+                        </button>
+                    )}
                 </div>
 
                 {/* 已安装的浏览器列表 */}
@@ -595,24 +599,31 @@ export default function SettingsPage() {
                 )}
 
                 {/* 环境提示 */}
-                <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/10 rounded-md border border-blue-100 dark:border-blue-900/20">
-                    <div className="flex gap-2 text-sm text-blue-700 dark:text-blue-300">
+                <div className={`mb-4 p-3 rounded-md border ${status?.canInstall
+                    ? 'bg-blue-50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-900/20'
+                    : 'bg-amber-50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-900/20'}`}>
+                    <div className={`flex gap-2 text-sm ${status?.canInstall
+                        ? 'text-blue-700 dark:text-blue-300'
+                        : 'text-amber-700 dark:text-amber-300'}`}>
                         <Info size={16} className="flex-shrink-0 mt-0.5" />
                         <div>
                             <p className="font-bold text-xs uppercase tracking-wide mb-1">环境说明</p>
-                            <p className="text-xs text-blue-600 dark:text-blue-400 leading-relaxed">
+                            <p className={`text-xs leading-relaxed ${status?.canInstall
+                                ? 'text-blue-600 dark:text-blue-400'
+                                : 'text-amber-600 dark:text-amber-400'}`}>
                                 {status?.canInstall ? (
                                     <>
-                                        检测到 {status?.platform === 'win32' ? 'Windows' : status?.platform === 'darwin' ? 'macOS' : 'Linux'}
+                                        检测到 {status?.platform === 'win32'
+                                            ? (status?.windowsVersion ? status.windowsVersion : 'Windows')
+                                            : status?.platform === 'darwin' ? 'macOS' : 'Linux'}
                                         {status?.linuxDistro ? ` (${status.linuxDistro})` : ''} 环境，
                                         支持自动下载安装 Chrome for Testing。
                                         如果您使用远程浏览器或已配置本地 Chrome 路径，无需使用此功能。
                                     </>
                                 ) : (
-                                    <>
-                                        {status?.cannotInstallReason || '当前平台不支持自动安装 Chrome'}。
-                                        建议使用远程浏览器连接或手动安装 Chrome/Chromium。
-                                    </>
+                                    <span className="whitespace-pre-wrap">
+                                        {status?.cannotInstallReason || '当前平台不支持自动安装 Chrome。建议使用远程浏览器连接或手动安装 Chrome/Chromium。'}
+                                    </span>
                                 )}
                             </p>
                         </div>

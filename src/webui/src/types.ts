@@ -51,6 +51,8 @@ export interface ChromeStatus {
     platform: string
     arch: string
     linuxDistro?: string
+    /** Windows 版本名称（如 Windows Server 2012 R2） */
+    windowsVersion?: string
     defaultVersion: string
     installed: boolean
     version?: string
