@@ -487,6 +487,18 @@ export async function installChrome(options: InstallOptions = {}): Promise<{
         };
     }
 
+    // 检查是否已安装
+    if (isChromeInstalled(options.installPath)) {
+        const installPath = options.installPath || getDefaultInstallPath();
+        const execPath = getChromeExecutablePath(installPath);
+        pluginState.log('info', `Chrome 已安装: ${execPath}`);
+
+        return {
+            success: true,
+            executablePath: execPath,
+        };
+    }
+
     isInstalling = true;
     const version = options.version || DEFAULT_CHROME_VERSION;
     const installPath = options.installPath || getDefaultInstallPath();

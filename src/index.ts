@@ -440,6 +440,13 @@ const plugin_init = async (ctx: NapCatPluginContext) => {
                                 });
                                 pluginState.log('info', '已自动更新浏览器路径配置');
                             }
+                            // 自动启动浏览器
+                            try {
+                                await initBrowser();
+                                pluginState.log('info', 'Chrome 安装后自动启动浏览器成功');
+                            } catch (startErr) {
+                                pluginState.log('warn', 'Chrome 安装后自动启动浏览器失败:', startErr);
+                            }
                         } else {
                             pluginState.log('error', `Chrome 安装失败: ${result.error}`);
                         }
