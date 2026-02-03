@@ -109,22 +109,22 @@ export default function TestPage() {
     return (
         <div className="grid md:grid-cols-2 gap-6 h-[calc(100vh-140px)] min-h-[600px]">
             {/* Left Panel - Parameters */}
-            <div className="glass-card flex flex-col overflow-hidden p-0">
-                <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
-                    <h3 className="font-bold flex items-center gap-2">
-                        <Type size={18} />
+            <div className="bg-white dark:bg-[#1a1b1d] rounded-lg border border-gray-200 dark:border-gray-800 flex flex-col overflow-hidden">
+                <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex-shrink-0 bg-gray-50/50 dark:bg-[#1a1b1d]">
+                    <h3 className="font-bold flex items-center gap-2 text-sm text-gray-900 dark:text-gray-100">
+                        <Type size={16} />
                         测试参数
                     </h3>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-6 space-y-5 custom-scrollbar">
+                <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
                     {/* Type Select */}
                     <div>
-                        <label className="text-xs font-semibold text-gray-500 uppercase mb-1 block">渲染类型</label>
+                        <label className="text-[10px] font-semibold text-gray-500 uppercase mb-1.5 block tracking-wider">渲染类型</label>
                         <select
                             value={testType}
                             onChange={(e) => handleTypeChange(e.target.value as 'html' | 'url')}
-                            className="input-field"
+                            className="input-field text-sm"
                         >
                             <option value="html">HTML 字符串</option>
                             <option value="url">URL 地址</option>
@@ -133,7 +133,7 @@ export default function TestPage() {
 
                     {/* Content */}
                     <div className="flex flex-col">
-                        <label className="text-xs font-semibold text-gray-500 uppercase mb-1 block">内容</label>
+                        <label className="text-[10px] font-semibold text-gray-500 uppercase mb-1.5 block tracking-wider">内容</label>
                         <textarea
                             value={content}
                             onChange={(e) => setContent(e.target.value)}
@@ -145,81 +145,81 @@ export default function TestPage() {
                     {/* Template Data (only for HTML) */}
                     {testType === 'html' && (
                         <div>
-                            <label className="text-xs font-semibold text-gray-500 uppercase mb-1 block">模板数据 (JSON)</label>
+                            <label className="text-[10px] font-semibold text-gray-500 uppercase mb-1.5 block tracking-wider">模板数据 (JSON)</label>
                             <input
                                 value={templateData}
                                 onChange={(e) => setTemplateData(e.target.value)}
-                                className="input-field font-mono text-sm"
+                                className="input-field font-mono text-xs"
                                 placeholder='{"time": "2024-01-01"}'
                             />
                         </div>
                     )}
 
                     {/* Advanced Options */}
-                    <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                    <div className="border border-gray-200 dark:border-gray-800 rounded-md overflow-hidden">
                         <div
                             onClick={() => setShowAdvanced(!showAdvanced)}
-                            className="bg-gray-50 dark:bg-[#202124] px-4 py-2 cursor-pointer flex justify-between items-center select-none"
+                            className="bg-gray-50 dark:bg-[#202124] px-3 py-2 cursor-pointer flex justify-between items-center select-none"
                         >
-                            <span className="text-xs font-bold text-gray-500 uppercase">高级选项</span>
+                            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">高级选项</span>
                             <ChevronDown
-                                size={16}
+                                size={14}
                                 className={`text-gray-400 transition-transform duration-200 ${showAdvanced ? 'rotate-180' : ''}`}
                             />
                         </div>
 
                         {showAdvanced && (
-                            <div className="p-4 space-y-4 bg-white dark:bg-[#18191C]">
-                                <div className="grid grid-cols-3 gap-3">
+                            <div className="p-3 space-y-3 bg-white dark:bg-[#1a1b1d]">
+                                <div className="grid grid-cols-3 gap-2">
                                     <div>
-                                        <label className="text-[10px] text-gray-400 uppercase block mb-1">宽 (Width)</label>
+                                        <label className="text-[10px] text-gray-400 uppercase block mb-1">Width</label>
                                         <input
                                             type="number"
                                             value={width}
                                             onChange={(e) => setWidth(e.target.value)}
-                                            className="input-field text-sm py-1"
+                                            className="input-field text-xs py-1"
                                             placeholder="1280"
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-[10px] text-gray-400 uppercase block mb-1">高 (Height)</label>
+                                        <label className="text-[10px] text-gray-400 uppercase block mb-1">Height</label>
                                         <input
                                             type="number"
                                             value={height}
                                             onChange={(e) => setHeight(e.target.value)}
-                                            className="input-field text-sm py-1"
+                                            className="input-field text-xs py-1"
                                             placeholder="800"
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-[10px] text-gray-400 uppercase block mb-1">缩放 (Scale)</label>
+                                        <label className="text-[10px] text-gray-400 uppercase block mb-1">Scale</label>
                                         <input
                                             type="number"
                                             value={scale}
                                             onChange={(e) => setScale(e.target.value)}
-                                            className="input-field text-sm py-1"
+                                            className="input-field text-xs py-1"
                                             placeholder="2"
                                             step="0.5"
                                         />
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-2 gap-2">
                                     <div>
-                                        <label className="text-[10px] text-gray-400 uppercase block mb-1">选择器 (Selector)</label>
+                                        <label className="text-[10px] text-gray-400 uppercase block mb-1">Selector</label>
                                         <input
                                             value={selector}
                                             onChange={(e) => setSelector(e.target.value)}
-                                            className="input-field text-sm py-1 font-mono"
+                                            className="input-field text-xs py-1 font-mono"
                                             placeholder="body"
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-[10px] text-gray-400 uppercase block mb-1">等待元素 (Wait)</label>
+                                        <label className="text-[10px] text-gray-400 uppercase block mb-1">Wait For</label>
                                         <input
                                             value={waitSelector}
                                             onChange={(e) => setWaitSelector(e.target.value)}
-                                            className="input-field text-sm py-1 font-mono"
+                                            className="input-field text-xs py-1 font-mono"
                                             placeholder="#app"
                                         />
                                     </div>
@@ -232,17 +232,17 @@ export default function TestPage() {
                                             id="omitBg"
                                             checked={omitBg}
                                             onChange={(e) => setOmitBg(e.target.checked)}
-                                            className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+                                            className="w-3.5 h-3.5 rounded border-gray-300 text-primary focus:ring-primary"
                                         />
-                                        <label htmlFor="omitBg" className="text-xs text-gray-500">透明背景</label>
+                                        <label htmlFor="omitBg" className="text-xs text-gray-600 dark:text-gray-400">Transparent Bg</label>
                                     </div>
                                     <div className="flex items-center gap-2 flex-1 justify-end">
-                                        <label className="text-xs text-gray-500">延迟(ms)</label>
+                                        <label className="text-xs text-gray-500">Delay(ms)</label>
                                         <input
                                             type="number"
                                             value={delay}
                                             onChange={(e) => setDelay(e.target.value)}
-                                            className="input-field text-sm py-1 w-20"
+                                            className="input-field text-xs py-1 w-16"
                                             placeholder="0"
                                         />
                                     </div>
@@ -253,22 +253,22 @@ export default function TestPage() {
                 </div>
 
                 {/* Run Button */}
-                <div className="p-6 border-t border-gray-100 dark:border-gray-800 flex-shrink-0 bg-gray-50/50 dark:bg-gray-800/20">
+                <div className="p-4 border-t border-gray-100 dark:border-gray-800 flex-shrink-0 bg-gray-50/50 dark:bg-[#1a1b1d]">
                     <button
                         onClick={runTest}
                         disabled={loading}
-                        className="btn btn-primary w-full py-3 shadow-pink-500/20 shadow-lg disabled:opacity-50"
+                        className="btn btn-primary w-full py-2 shadow-sm disabled:opacity-50 text-sm font-medium"
                     >
-                        <Play size={18} />
+                        <Play size={16} />
                         {loading ? '渲染中...' : '执行渲染'}
                     </button>
                 </div>
             </div>
 
             {/* Right Panel - Result */}
-            <div className="glass-card flex flex-col h-full overflow-hidden p-0">
-                <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex-shrink-0 flex justify-between items-center">
-                    <h3 className="font-bold">结果预览</h3>
+            <div className="bg-white dark:bg-[#1a1b1d] rounded-lg border border-gray-200 dark:border-gray-800 flex flex-col h-full overflow-hidden">
+                <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex-shrink-0 flex justify-between items-center bg-gray-50/50 dark:bg-[#1a1b1d]">
+                    <h3 className="font-bold text-sm text-gray-900 dark:text-gray-100">结果预览</h3>
                     {renderTime !== null && (
                         <span className="text-xs text-gray-500 font-mono">耗时: {renderTime}ms</span>
                     )}
@@ -281,7 +281,7 @@ export default function TestPage() {
                             <span className="text-sm text-gray-400">渲染中...</span>
                         </div>
                     ) : error ? (
-                        <div className="text-red-500 p-4 bg-red-50 dark:bg-red-900/10 rounded">
+                        <div className="text-red-600 p-4 bg-red-50 dark:bg-red-900/10 rounded border border-red-100 dark:border-red-900/20 text-sm">
                             ❌ {error}
                         </div>
                     ) : result ? (
@@ -289,7 +289,7 @@ export default function TestPage() {
                             <img
                                 src={`data:image/png;base64,${result}`}
                                 alt="Render Result"
-                                className="max-w-full h-auto shadow-lg rounded"
+                                className="max-w-full h-auto shadow-sm border border-gray-200 dark:border-gray-800 rounded bg-white dark:bg-gray-900"
                             />
                         </div>
                     ) : (

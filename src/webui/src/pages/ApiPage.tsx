@@ -32,11 +32,11 @@ const apiEndpoints: { section: string; icon: React.ReactNode; items: ApiEndpoint
                     { name: 'setViewport', type: 'object', required: false, desc: '{ width, height, deviceScaleFactor }' },
                 ],
                 response: `{
-  "code": 0,
-  "data": "Base64String...",  // 图片数据
-  "message": "OK",
-  "time": 150                 // 耗时(ms)
-}`,
+                    "code": 0,
+                    "data": "Base64String...",  // 图片数据
+                    "message": "OK",
+                    "time": 150                 // 耗时(ms)
+                    }`,
             },
             {
                 id: 'api-render',
@@ -133,17 +133,17 @@ const apiEndpoints: { section: string; icon: React.ReactNode; items: ApiEndpoint
 
 function ApiCard({ endpoint, isOpen, onToggle }: { endpoint: ApiEndpoint; isOpen: boolean; onToggle: () => void }) {
     return (
-        <div id={endpoint.id} className={`api-card ${isOpen ? 'open' : ''}`}>
-            <div className="p-4 flex items-center justify-between cursor-pointer select-none hover:bg-black/[0.02] dark:hover:bg-white/[0.02]" onClick={onToggle}>
+        <div id={endpoint.id} className="bg-white dark:bg-[#1a1b1d] rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden mb-3">
+            <div className="p-4 flex items-center justify-between cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors" onClick={onToggle}>
                 <div className="flex items-center gap-3 overflow-hidden">
-                    <span className={`method-badge method-${endpoint.method}`}>{endpoint.method}</span>
+                    <span className={`method-badge method-${endpoint.method} text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wide`}>{endpoint.method}</span>
                     <div className="flex items-center gap-2">
-                        <code className="text-sm font-semibold truncate">{endpoint.path}</code>
+                        <code className="text-sm font-semibold truncate text-gray-800 dark:text-gray-200">{endpoint.path}</code>
                         {endpoint.noAuth && (
-                            <span className="px-1.5 py-0.5 rounded text-[10px] bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 font-bold">无认证</span>
+                            <span className="w-1.5 h-1.5 rounded-full bg-green-500" title="无认证"></span>
                         )}
                         {!endpoint.noAuth && (
-                            <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 font-bold">需认证</span>
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" title="需认证"></span>
                         )}
                     </div>
                 </div>
@@ -151,47 +151,47 @@ function ApiCard({ endpoint, isOpen, onToggle }: { endpoint: ApiEndpoint; isOpen
             </div>
 
             {isOpen && (
-                <div className="px-6 pb-6 border-t border-gray-100 dark:border-gray-700 pt-4">
-                    <p className="text-sm text-gray-500 mb-4">{endpoint.description}</p>
+                <div className="px-5 pb-5 border-t border-gray-100 dark:border-gray-800 pt-4">
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 leading-relaxed">{endpoint.description}</p>
 
                     {!endpoint.noAuth && (
-                        <div className="text-xs p-2 mb-4 bg-amber-50 dark:bg-amber-900/10 text-amber-700 dark:text-amber-400 rounded">
-                            🔒 此接口需要 WebUI 认证 Token
+                        <div className="text-xs p-2.5 mb-4 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 rounded border border-amber-100 dark:border-amber-900/30 flex items-center gap-2">
+                            <span>🔒</span> 此接口需要 WebUI 认证 Token
                         </div>
                     )}
 
                     {endpoint.params && endpoint.params.length > 0 && (
                         <>
-                            <div className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                            <div className="text-xs font-bold text-gray-900 dark:text-gray-100 mb-2 uppercase tracking-wide">
                                 {endpoint.method === 'GET' ? 'Query Parameters' : 'Request Body (JSON)'}
                             </div>
-                            <div className="overflow-x-auto">
+                            <div className="overflow-x-auto border border-gray-200 dark:border-gray-800 rounded-lg">
                                 <table className="w-full text-sm border-collapse">
                                     <thead>
-                                        <tr className="border-b-2 border-gray-100 dark:border-gray-700">
-                                            <th className="text-left py-2 px-2 text-gray-500 font-semibold">参数名</th>
-                                            <th className="text-left py-2 px-2 text-gray-500 font-semibold">类型</th>
-                                            <th className="text-left py-2 px-2 text-gray-500 font-semibold">必填</th>
-                                            <th className="text-left py-2 px-2 text-gray-500 font-semibold">说明</th>
+                                        <tr className="bg-gray-50 dark:bg-black/20 border-b border-gray-200 dark:border-gray-800">
+                                            <th className="text-left py-2 px-3 text-gray-500 font-semibold text-xs uppercase tracking-wider">参数名</th>
+                                            <th className="text-left py-2 px-3 text-gray-500 font-semibold text-xs uppercase tracking-wider">类型</th>
+                                            <th className="text-left py-2 px-3 text-gray-500 font-semibold text-xs uppercase tracking-wider">必填</th>
+                                            <th className="text-left py-2 px-3 text-gray-500 font-semibold text-xs uppercase tracking-wider">说明</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {endpoint.params.map((param) => (
-                                            <tr key={param.name} className="border-b border-gray-100 dark:border-gray-700">
-                                                <td className="py-2 px-2 text-gray-700 dark:text-gray-300">{param.name}</td>
-                                                <td className="py-2 px-2">
-                                                    <span className="font-mono text-xs px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-red-500 dark:text-red-400">
+                                            <tr key={param.name} className="border-b border-gray-100 dark:border-gray-800 last:border-0">
+                                                <td className="py-2.5 px-3 text-gray-700 dark:text-gray-300 font-mono text-xs">{param.name}</td>
+                                                <td className="py-2.5 px-3">
+                                                    <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
                                                         {param.type}
                                                     </span>
                                                 </td>
-                                                <td className="py-2 px-2">
+                                                <td className="py-2.5 px-3">
                                                     {param.required ? (
-                                                        <span className="text-red-500 text-xs border border-red-500 px-1 rounded">是</span>
+                                                        <span className="text-red-500 text-[10px] font-bold">YES</span>
                                                     ) : (
-                                                        <span className="text-amber-500 text-xs border border-amber-500 px-1 rounded">否</span>
+                                                        <span className="text-gray-400 text-[10px]">NO</span>
                                                     )}
                                                 </td>
-                                                <td className="py-2 px-2 text-gray-600 dark:text-gray-400">{param.desc}</td>
+                                                <td className="py-2.5 px-3 text-gray-600 dark:text-gray-400 text-xs">{param.desc}</td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -202,8 +202,8 @@ function ApiCard({ endpoint, isOpen, onToggle }: { endpoint: ApiEndpoint; isOpen
 
                     {endpoint.response && (
                         <>
-                            <div className="text-sm font-bold text-gray-700 dark:text-gray-300 mt-4 mb-2">Response JSON</div>
-                            <pre className="text-xs">{endpoint.response}</pre>
+                            <div className="text-xs font-bold text-gray-900 dark:text-gray-100 mt-5 mb-2 uppercase tracking-wide">Response JSON</div>
+                            <pre className="text-xs bg-gray-50 dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg p-3 overflow-x-auto text-gray-700 dark:text-gray-300 font-mono">{endpoint.response}</pre>
                         </>
                     )}
                 </div>
@@ -231,16 +231,15 @@ export default function ApiPage() {
         <div className="flex flex-col lg:flex-row gap-8 items-start max-w-7xl mx-auto">
             {/* Left TOC */}
             <div className="hidden lg:block w-56 flex-shrink-0 sticky top-28">
-                <div className="bg-white dark:bg-[#202124] rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 p-3">
-                    <div className="text-xs font-bold text-gray-400 uppercase px-3 py-2">快速开始</div>
-                    <a onClick={() => document.getElementById('api-quickstart')?.scrollIntoView({ behavior: 'smooth' })} className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-primary cursor-pointer">
+                <div className="bg-white dark:bg-[#1a1b1d] rounded-lg border border-gray-200 dark:border-gray-800 p-1">
+                    <div className="text-[10px] font-bold text-gray-400 uppercase px-3 py-2 tracking-wider">Start</div>
+                    <a onClick={() => document.getElementById('api-quickstart')?.scrollIntoView({ behavior: 'smooth' })} className="block px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded cursor-pointer">
                         调用说明
                     </a>
 
                     {apiEndpoints.map((section) => (
-                        <div key={section.section}>
-                            <div className="h-px bg-gray-100 dark:bg-gray-700 my-2"></div>
-                            <div className="text-xs font-bold text-gray-400 uppercase px-3 py-2">{section.section}</div>
+                        <div key={section.section} className="mt-2">
+                            <div className="text-[10px] font-bold text-gray-400 uppercase px-3 py-2 tracking-wider">{section.section}</div>
                             {section.items.map((item) => (
                                 <a
                                     key={item.id}
@@ -248,7 +247,7 @@ export default function ApiPage() {
                                         setOpenCards((prev) => new Set([...prev, item.id]))
                                         setTimeout(() => document.getElementById(item.id)?.scrollIntoView({ behavior: 'smooth' }), 100)
                                     }}
-                                    className="block px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-primary cursor-pointer border-l-2 border-transparent hover:border-primary hover:bg-primary/5"
+                                    className="block px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded cursor-pointer truncate font-mono text-xs"
                                 >
                                     {item.path}
                                 </a>
@@ -262,42 +261,42 @@ export default function ApiPage() {
             <div className="flex-1 w-full min-w-0 space-y-12 pb-24">
                 {/* Quick Start */}
                 <section id="api-quickstart">
-                    <h3 className="flex items-center gap-2 text-xl font-bold mb-6 text-gray-800 dark:text-gray-100">
-                        <Zap size={24} className="text-primary" />
+                    <h3 className="flex items-center gap-2 text-lg font-bold mb-6 text-gray-900 dark:text-gray-100">
+                        <Zap size={20} className="text-gray-900 dark:text-gray-100" />
                         快速开始
                     </h3>
 
-                    <div className="glass-card p-6 mb-6">
-                        <h4 className="font-bold text-lg mb-3">API 路径说明</h4>
+                    <div className="bg-white dark:bg-[#1a1b1d] rounded-lg border border-gray-200 dark:border-gray-800 p-6 mb-6">
+                        <h4 className="font-bold text-base mb-3 text-gray-900 dark:text-white">API 路径说明</h4>
 
                         <div className="mb-4">
                             <div className="flex items-center gap-2 mb-2">
-                                <span className="px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 text-xs font-bold rounded">推荐</span>
-                                <span className="text-sm font-semibold">无认证 API（供其他插件调用）</span>
+                                <span className="px-1.5 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-[10px] font-bold rounded uppercase">Recommended</span>
+                                <span className="text-sm font-medium text-gray-600 dark:text-gray-400">无认证 API（供其他插件调用）</span>
                             </div>
-                            <div className="bg-gray-900 text-gray-100 rounded-lg p-3 font-mono text-sm overflow-x-auto">
+                            <div className="bg-gray-50 dark:bg-black border border-gray-200 dark:border-gray-800 text-gray-800 dark:text-gray-200 rounded-md p-3 font-mono text-sm overflow-x-auto">
                                 <span className="text-gray-400">{'{host}'}</span>
-                                <span className="text-green-400">/plugin/napcat-plugin-puppeteer/api</span>
-                                <span className="text-yellow-400">/{'{endpoint}'}</span>
+                                <span className="text-green-600 dark:text-green-500">/plugin/napcat-plugin-puppeteer/api</span>
+                                <span className="text-amber-600 dark:text-amber-500">{'/{endpoint}'}</span>
                             </div>
                         </div>
 
                         <div>
                             <div className="flex items-center gap-2 mb-2">
-                                <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 text-xs font-bold rounded">WebUI</span>
-                                <span className="text-sm font-semibold">需认证 API（WebUI 管理）</span>
+                                <span className="px-1.5 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-[10px] font-bold rounded uppercase">WebUI</span>
+                                <span className="text-sm font-medium text-gray-600 dark:text-gray-400">需认证 API（WebUI 管理）</span>
                             </div>
-                            <div className="bg-gray-900 text-gray-100 rounded-lg p-3 font-mono text-sm overflow-x-auto">
+                            <div className="bg-gray-50 dark:bg-black border border-gray-200 dark:border-gray-800 text-gray-800 dark:text-gray-200 rounded-md p-3 font-mono text-sm overflow-x-auto">
                                 <span className="text-gray-400">{'{host}'}</span>
-                                <span className="text-blue-400">/api/Plugin/ext/napcat-plugin-puppeteer</span>
-                                <span className="text-yellow-400">/{'{endpoint}'}</span>
+                                <span className="text-blue-600 dark:text-blue-500">/api/Plugin/ext/napcat-plugin-puppeteer</span>
+                                <span className="text-amber-600 dark:text-amber-500">{'/{endpoint}'}</span>
                             </div>
                         </div>
                     </div>
 
-                    <div className="glass-card p-6">
-                        <h4 className="font-bold text-lg mb-4">调用示例</h4>
-                        <pre className="text-xs overflow-x-auto">{`// 在其他插件中调用（无需认证）
+                    <div className="bg-white dark:bg-[#1a1b1d] rounded-lg border border-gray-200 dark:border-gray-800 p-6">
+                        <h4 className="font-bold text-base mb-4 text-gray-900 dark:text-white">调用示例</h4>
+                        <pre className="text-xs overflow-x-auto font-mono text-gray-600 dark:text-gray-400">{`// 在其他插件中调用（无需认证）
 const response = await fetch('http://localhost:6099/plugin/napcat-plugin-puppeteer/api/render', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -315,19 +314,21 @@ const result = await response.json();
                 {/* API Sections */}
                 {apiEndpoints.map((section) => (
                     <section key={section.section}>
-                        <h3 className="flex items-center gap-2 text-xl font-bold mb-6 text-gray-800 dark:text-gray-100">
-                            {section.icon}
+                        <h3 className="flex items-center gap-2 text-lg font-bold mb-6 text-gray-900 dark:text-gray-100">
+                            <span className="text-gray-900 dark:text-gray-100">{section.icon}</span>
                             {section.section}
                         </h3>
 
-                        {section.items.map((endpoint) => (
-                            <ApiCard
-                                key={endpoint.id}
-                                endpoint={endpoint}
-                                isOpen={openCards.has(endpoint.id)}
-                                onToggle={() => toggleCard(endpoint.id)}
-                            />
-                        ))}
+                        <div className="space-y-4">
+                            {section.items.map((endpoint) => (
+                                <ApiCard
+                                    key={endpoint.id}
+                                    endpoint={endpoint}
+                                    isOpen={openCards.has(endpoint.id)}
+                                    onToggle={() => toggleCard(endpoint.id)}
+                                />
+                            ))}
+                        </div>
                     </section>
                 ))}
             </div>
