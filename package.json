@@ -26,8 +26,10 @@
         "vite": "^6.0.0"
     },
     "scripts": {
-        "build": "vite build && npm run copy",
-        "copy": "node -e \"const fs=require('fs');const path=require('path');fs.cpSync('src/webui','dist/webui',{recursive:true});const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));delete pkg.devDependencies;delete pkg.scripts;fs.writeFileSync('dist/package.json',JSON.stringify(pkg,null,2));console.log('✅ 已复制 webui 和 package.json 到 dist 目录');\"",
+        "build": "vite build && npm run build:webui && npm run copy",
+        "build:webui": "cd src/webui && npm install && npm run build",
+        "copy": "node -e \"const fs=require('fs');fs.cpSync('src/webui/dist','dist/webui',{recursive:true});const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));delete pkg.devDependencies;delete pkg.scripts;fs.writeFileSync('dist/package.json',JSON.stringify(pkg,null,2));console.log('✅ 已复制 webui 和 package.json 到 dist 目录');\"",
+        "dev:webui": "cd src/webui && npm run dev",
         "watch": "vite build --watch"
     }
 }

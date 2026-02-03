@@ -481,7 +481,7 @@ const plugin_init = async (ctx: NapCatPluginContext) => {
                 path: 'puppeteer-dashboard',
                 title: 'Puppeteer 渲染服务',
                 icon: '🎨',
-                htmlFile: 'webui/dashboard.html',
+                htmlFile: 'webui/index.html',
                 description: '管理 Puppeteer 渲染服务'
             });
 
