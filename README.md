@@ -17,6 +17,20 @@
     - [通过 WebUI 插件市场安装（推荐）](#通过-webui-插件市场安装推荐)
     - [手动安装（发布版）](#手动安装发布版)
     - [从源码构建](#从源码构建)
+  - [Docker 部署远程浏览器（推荐）](#docker-部署远程浏览器推荐)
+    - [为什么推荐这种方式？](#为什么推荐这种方式)
+    - [方式一：使用 Docker 命令直接运行（最简单）](#方式一使用-docker-命令直接运行最简单)
+    - [方式二：使用 Docker Compose](#方式二使用-docker-compose)
+    - [方式三：与 NapCat Docker 同网络部署](#方式三与-napcat-docker-同网络部署)
+    - [方式四：使用其他浏览器镜像](#方式四使用其他浏览器镜像)
+      - [zenika/alpine-chrome（更轻量，约 400MB）](#zenikaalpine-chrome更轻量约-400mb)
+    - [配置插件连接远程浏览器](#配置插件连接远程浏览器)
+    - [验证连接](#验证连接)
+    - [常见问题](#常见问题)
+      - [Q: 连接失败怎么办？](#q-连接失败怎么办)
+      - [Q: 如何查看浏览器服务日志？](#q-如何查看浏览器服务日志)
+      - [Q: 如何限制浏览器资源使用？](#q-如何限制浏览器资源使用)
+      - [Q: browserless/chrome 有 Web 管理界面吗？](#q-browserlesschrome-有-web-管理界面吗)
   - [运行时行为](#运行时行为)
   - [API 参考](#api-参考)
     - [基础信息](#基础信息)
@@ -80,7 +94,7 @@
 ## 运行前准备
 
 - 安装 [NapCat](https://napneko.github.io/napcat/) 并启用插件管理功能。
-- 系统需安装可执行的 Chromium 内核浏览器（Chrome、Edge 或 Chromium）。插件会自动检测常见路径，若失败需手动配置。
+- 系统需安装可执行的 Chromium 内核浏览器（Chrome、Edge 或 Chromium），或者使用 [Docker 部署远程浏览器](#docker-部署远程浏览器推荐)。插件会自动检测常见路径，若失败需手动配置。
 - 建议安装 `pnpm`，方便从源码构建。
 
 ## 安装与部署
@@ -110,6 +124,182 @@ pnpm run build
 - 使用 Vite 将 `src/index.ts` 打包成 `dist/index.mjs`。
 - 自动将 `src/webui` 复制到 `dist/webui`。
 - 精简 `package.json` 后同步到 `dist/package.json`（移除开发依赖、脚本）。
+
+## Docker 部署远程浏览器（推荐）
+
+如果你的 NapCat 运行在 Docker 容器中，或者不想在本机安装浏览器，可以使用 Docker 部署一个独立的浏览器服务，然后通过 WebSocket 连接。
+
+### 为什么推荐这种方式？
+
+- ✅ **无需在 NapCat 容器中安装浏览器**：避免镜像臃肿、依赖冲突
+- ✅ **资源隔离**：浏览器崩溃不会影响 NapCat 主进程
+- ✅ **易于维护**：可独立重启、升级浏览器服务
+- ✅ **支持多实例共享**：多个 NapCat 实例可共用一个浏览器服务
+
+### 方式一：使用 Docker 命令直接运行（最简单）
+
+```bash
+docker run -d \
+  --name chrome-browser \
+  --restart unless-stopped \
+  -p 3310:3000 \
+  -e MAX_CONCURRENT_SESSIONS=10 \
+  -e CONNECTION_TIMEOUT=60000 \
+  --shm-size=2g \
+  browserless/chrome:latest
+```
+
+然后在插件配置中设置远程浏览器地址：
+
+```
+ws://127.0.0.1:3310
+```
+
+> **💡 提示**：
+> - 端口 `3310` 可以根据你的环境自行调整，避免与其他服务冲突
+> - 如果 NapCat 也在 Docker 中运行，请使用容器名或 Docker 网络 IP 替代 `127.0.0.1`
+
+### 方式二：使用 Docker Compose
+
+创建 `docker-compose.yml` 文件：
+
+```yaml
+version: '3.8'
+
+services:
+  chrome:
+    image: browserless/chrome:latest
+    container_name: chrome-browser
+    restart: unless-stopped
+    ports:
+      - "3310:3000"    # 可自行修改端口，格式为 宿主机端口:容器端口
+    environment:
+      - MAX_CONCURRENT_SESSIONS=10      # 最大并发会话数
+      - CONNECTION_TIMEOUT=60000        # 连接超时时间（毫秒）
+      - PREBOOT_CHROME=true             # 预启动浏览器，加快首次连接
+      - KEEP_ALIVE=true                 # 保持连接活跃
+    shm_size: '2gb'    # 共享内存大小，建议至少 1GB
+    # 可选：限制资源使用
+    # deploy:
+    #   resources:
+    #     limits:
+    #       memory: 2G
+    #       cpus: '2'
+```
+
+启动服务：
+
+```bash
+docker-compose up -d
+```
+
+### 方式三：与 NapCat Docker 同网络部署
+
+如果你的 NapCat 也是通过 Docker 运行的，建议将浏览器容器加入同一网络：
+
+```bash
+# 1. 创建共享网络（如果还没有）
+docker network create napcat-network
+
+# 2. 启动浏览器容器并加入网络
+docker run -d \
+  --name chrome-browser \
+  --network napcat-network \
+  --restart unless-stopped \
+  -e MAX_CONCURRENT_SESSIONS=10 \
+  --shm-size=2g \
+  browserless/chrome:latest
+
+# 3. 确保 NapCat 容器也在同一网络
+docker network connect napcat-network <你的napcat容器名>
+```
+
+此时插件配置中使用容器名作为地址：
+
+```
+ws://chrome-browser:3000
+```
+
+> **注意**：使用容器名通信时，端口号使用容器内部端口 `3000`，无需映射到宿主机。
+
+### 方式四：使用其他浏览器镜像
+
+除了 `browserless/chrome`，你也可以使用其他镜像：
+
+#### zenika/alpine-chrome（更轻量，约 400MB）
+
+```bash
+docker run -d \
+  --name chrome-browser \
+  --restart unless-stopped \
+  -p 3310:9222 \
+  --shm-size=2g \
+  zenika/alpine-chrome:latest \
+  --no-sandbox \
+  --disable-gpu \
+  --disable-dev-shm-usage \
+  --remote-debugging-address=0.0.0.0 \
+  --remote-debugging-port=9222
+```
+
+配置地址（需要先获取 WebSocket 地址）：
+
+```bash
+# 获取 WebSocket 地址
+curl http://127.0.0.1:3310/json/version
+# 返回的 webSocketDebuggerUrl 即为连接地址
+```
+
+### 配置插件连接远程浏览器
+
+部署好浏览器服务后，在 NapCat WebUI 中配置插件：
+
+1. 进入 **插件管理** → **Puppeteer 渲染服务** → **控制台**
+2. 点击左侧 **设置**
+3. 在 **远程浏览器地址 (Docker)** 中填入 WebSocket 地址，例如：
+   - 本机部署：`ws://127.0.0.1:3310`
+   - 同网络容器：`ws://chrome-browser:3000`
+4. 保存配置后，点击 **重启浏览器** 使配置生效
+
+### 验证连接
+
+配置完成后，可以通过以下方式验证：
+
+1. 在 WebUI 控制台的 **概览** 页面查看浏览器状态
+2. 连接模式应显示为 **🌐 远程连接**
+3. 在 **测试** 页面进行一次截图测试
+
+### 常见问题
+
+#### Q: 连接失败怎么办？
+
+1. 确认浏览器容器正在运行：`docker ps | grep chrome`
+2. 检查端口是否正确映射：`docker port chrome-browser`
+3. 测试 WebSocket 端口是否可达：`curl http://127.0.0.1:3310/json/version`
+4. 如果 NapCat 在 Docker 中，确保两个容器在同一网络
+
+#### Q: 如何查看浏览器服务日志？
+
+```bash
+docker logs -f chrome-browser
+```
+
+#### Q: 如何限制浏览器资源使用？
+
+```bash
+docker run -d \
+  --name chrome-browser \
+  --memory=2g \
+  --cpus=2 \
+  # ... 其他参数
+```
+
+#### Q: browserless/chrome 有 Web 管理界面吗？
+
+有的！访问 `http://127.0.0.1:3310` 可以看到调试界面，包括：
+- 当前活跃会话
+- 性能指标
+- 调试工具
 
 ## 运行时行为
 
@@ -209,6 +399,7 @@ pnpm run build
 | `enabled` | 是否启用渲染服务 | `true` |
 | `debug` | 是否输出调试日志（会在 log 中打印参数、用时） | `false` |
 | `browser.executablePath` | 指定浏览器路径，留空时自动检测 | `""` |
+| `browser.browserWSEndpoint` | 远程浏览器 WebSocket 地址（Docker 模式） | `""` |
 | `browser.headless` | 是否使用无头模式 | `true` |
 | `browser.args` | 浏览器启动参数数组 | 预置一组无头环境友好参数 |
 | `browser.maxPages` | 并发页面上限 | `5` |
@@ -281,12 +472,20 @@ if (result.code === 0) {
 - **浏览器无法启动**：
   1. 检查本机是否安装 Chrome/Edge/Chromium；
   2. 在配置中手动填写 `browser.executablePath`；
-  3. Linux 环境若仍失败，可尝试在启动参数增加 `--no-sandbox`（默认已添加）。
+  3. Linux 环境若仍失败，可尝试在启动参数增加 `--no-sandbox`（默认已添加）；
+  4. 考虑使用 [Docker 部署远程浏览器](#docker-部署远程浏览器推荐)。
+- **远程浏览器连接失败**：
+  1. 确认浏览器容器正在运行：`docker ps | grep chrome`；
+  2. 检查 WebSocket 地址格式是否正确（应以 `ws://` 开头）；
+  3. 测试端口是否可达：`curl http://<host>:<port>/json/version`；
+  4. 如果 NapCat 在 Docker 中，确保两个容器在同一网络或端口已正确映射。
 - **截图为空白**：
   1. 确认 HTML 渲染后存在目标元素；
   2. 设置 `waitForSelector` 或 `waitForTimeout` 等待前端渲染完成；
   3. 如使用远程字体，确保网络可达。
-- **中文乱码**：在宿主系统安装中文字体或在模板中引入 Web 字体。
+- **中文乱码**：
+  1. 本地模式：在宿主系统安装中文字体；
+  2. Docker 模式：使用包含中文字体的镜像，或在模板中引入 Web 字体（如 Google Fonts）。
 - **渲染阻塞**：若并发量大，请调高 `browser.maxPages` 或设计队列，避免大量任务同时抢占页面。
 
 ## 许可证

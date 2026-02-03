@@ -9,6 +9,7 @@ import type { PluginConfig, BrowserConfig } from './types';
 /** 默认浏览器配置 */
 export const DEFAULT_BROWSER_CONFIG: BrowserConfig = {
     executablePath: '',
+    browserWSEndpoint: '',
     headless: true,
     args: [
         '--no-sandbox',
@@ -112,7 +113,7 @@ export function getDefaultBrowserPaths(): string[] {
             '/Applications/Chromium.app/Contents/MacOS/Chromium',
         ];
     } else {
-        // Linux
+        // Linux / Docker
         return [
             '/usr/bin/google-chrome',
             '/usr/bin/google-chrome-stable',
@@ -120,6 +121,11 @@ export function getDefaultBrowserPaths(): string[] {
             '/usr/bin/chromium-browser',
             '/usr/bin/microsoft-edge',
             '/snap/bin/chromium',
+            // Docker 常见路径
+            '/opt/google/chrome/chrome',
+            '/opt/google/chrome/google-chrome',
+            '/headless-shell/headless-shell', // puppeteer 官方 Docker 镜像
+            '/chrome/chrome', // 某些精简镜像
         ];
     }
 }

@@ -186,8 +186,17 @@ export interface BrowserConfig {
     /** 
      * 浏览器可执行文件路径
      * 留空则尝试自动检测系统浏览器
+     * 注意：如果设置了 browserWSEndpoint，此项将被忽略
      */
     executablePath?: string;
+
+    /**
+     * 远程浏览器 WebSocket 地址
+     * 用于连接 Docker 容器中的浏览器或远程浏览器服务
+     * 例如：ws://localhost:3000 或 ws://chrome:3000
+     * 设置此项后将忽略 executablePath，直接连接远程浏览器
+     */
+    browserWSEndpoint?: string;
 
     /**
      * 是否启用无头模式
@@ -255,12 +264,16 @@ export interface PluginConfig {
 export interface BrowserStatus {
     /** 是否已连接 */
     connected: boolean;
+    /** 连接模式：local（本地启动）或 remote（远程连接） */
+    mode: 'local' | 'remote';
     /** 浏览器版本 */
     version?: string;
     /** 当前打开的页面数 */
     pageCount: number;
-    /** 浏览器可执行文件路径 */
+    /** 浏览器可执行文件路径（本地模式） */
     executablePath?: string;
+    /** 远程浏览器地址（远程模式） */
+    browserWSEndpoint?: string;
     /** 启动时间 */
     startTime?: number;
     /** 总渲染次数 */

@@ -73,6 +73,11 @@ function getBrowserArgs(config: BrowserConfig): string[] {
         '--disable-translate',
         '--disable-notifications',
         '--disable-crash-reporter',
+        // Docker 环境优化参数
+        '--single-process', // 某些受限环境需要
+        '--disable-software-rasterizer',
+        '--disable-features=VizDisplayCompositor',
+        '--font-render-hinting=none', // 字体渲染优化
         `--window-size=${config.defaultViewportWidth || 1280},${config.defaultViewportHeight || 800}`,
     ];
 
@@ -93,15 +98,43 @@ export async function initBrowser(): Promise<boolean> {
     const config = pluginState.config.browser;
     pluginState.logDebug('浏览器配置:', JSON.stringify(config, null, 2));
 
-    const executablePath = findBrowserPath(config.executablePath);
-
-    if (!executablePath) {
-        pluginState.log('error', '未找到可用的浏览器，请在配置中指定浏览器路径');
-        return false;
-    }
-
     try {
-        pluginState.log('info', `正在启动浏览器: ${executablePath}`);
+        // 优先使用远程浏览器连接
+        if (config.browserWSEndpoint) {
+            pluginState.log('info', `正在连接远程浏览器: ${config.browserWSEndpoint}`);
+
+            browser = await puppeteer.connect({
+                browserWSEndpoint: config.browserWSEndpoint,
+                defaultViewport: {
+                    width: config.defaultViewportWidth || 1280,
+                    height: config.defaultViewportHeight || 800,
+                    deviceScaleFactor: config.deviceScaleFactor || 2,
+                },
+            });
+
+            // 监听浏览器断开事件
+            browser.on('disconnected', () => {
+                pluginState.log('warn', '远程浏览器连接已断开');
+                browser = null;
+                currentPageCount = 0;
+                pageQueue = [];
+            });
+
+            stats.startTime = Date.now();
+            pluginState.log('info', '远程浏览器连接成功');
+            pluginState.logDebug('浏览器版本:', await browser.version());
+            return true;
+        }
+
+        // 本地浏览器启动
+        const executablePath = findBrowserPath(config.executablePath);
+
+        if (!executablePath) {
+            pluginState.log('error', '未找到可用的浏览器，请在配置中指定浏览器路径或远程浏览器地址(browserWSEndpoint)');
+            return false;
+        }
+
+        pluginState.log('info', `正在启动本地浏览器: ${executablePath}`);
 
         browser = await puppeteer.launch({
             executablePath,
@@ -127,8 +160,8 @@ export async function initBrowser(): Promise<boolean> {
         pluginState.logDebug('浏览器版本:', await browser.version());
         return true;
     } catch (error) {
-        pluginState.log('error', '启动浏览器失败:', error);
-        pluginState.logDebug('启动失败详情:', error);
+        pluginState.log('error', '启动/连接浏览器失败:', error);
+        pluginState.logDebug('失败详情:', error);
         browser = null;
         return false;
     }
@@ -172,13 +205,16 @@ export async function getBrowserStatus(): Promise<BrowserStatus> {
     pluginState.logDebug('getBrowserStatus() 被调用');
 
     const config = pluginState.config.browser;
+    const isRemoteMode = !!config.browserWSEndpoint;
 
     if (!browser) {
         pluginState.logDebug('浏览器未连接');
         return {
             connected: false,
+            mode: isRemoteMode ? 'remote' : 'local',
             pageCount: 0,
-            executablePath: findBrowserPath(config.executablePath, true),
+            executablePath: isRemoteMode ? undefined : findBrowserPath(config.executablePath, true),
+            browserWSEndpoint: isRemoteMode ? config.browserWSEndpoint : undefined,
             totalRenders: stats.totalRenders,
             failedRenders: stats.failedRenders,
         };
@@ -190,9 +226,11 @@ export async function getBrowserStatus(): Promise<BrowserStatus> {
 
         return {
             connected: true,
+            mode: isRemoteMode ? 'remote' : 'local',
             version,
             pageCount: pages.length,
-            executablePath: findBrowserPath(config.executablePath, true),
+            executablePath: isRemoteMode ? undefined : findBrowserPath(config.executablePath, true),
+            browserWSEndpoint: isRemoteMode ? config.browserWSEndpoint : undefined,
             startTime: stats.startTime,
             totalRenders: stats.totalRenders,
             failedRenders: stats.failedRenders,
@@ -200,6 +238,7 @@ export async function getBrowserStatus(): Promise<BrowserStatus> {
     } catch (error) {
         return {
             connected: false,
+            mode: isRemoteMode ? 'remote' : 'local',
             pageCount: 0,
             totalRenders: stats.totalRenders,
             failedRenders: stats.failedRenders,
