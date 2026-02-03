@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Info, Chrome, Download, RefreshCw, Check, AlertCircle, FilePlus } from 'lucide-react'
+import { Info, Chrome, Download, RefreshCw, Check, AlertCircle } from 'lucide-react'
 import { noAuthFetch, authFetch } from '../utils/api'
 import { showToast } from '../hooks/useToast'
 import type { ChromeStatus, ChromeProgress } from '../types'
@@ -85,20 +85,6 @@ export default function ChromePage() {
         } catch (e) {
             showToast('启动安装失败: ' + (e as Error).message, 'error')
             setIsInstalling(false)
-        }
-    }
-
-    const installDepsOnly = async () => {
-        try {
-            showToast('正在安装依赖...', 'info')
-            const data = await authFetch('/chrome/install-deps', { method: 'POST' })
-            if (data.code === 0) {
-                showToast(data.message || '依赖安装任务已启动', 'success')
-            } else {
-                showToast('安装失败: ' + data.message, 'error')
-            }
-        } catch (e) {
-            showToast('安装失败: ' + (e as Error).message, 'error')
         }
     }
 
@@ -274,19 +260,11 @@ export default function ChromePage() {
                     <div className="flex gap-3 pt-2">
                         <button
                             onClick={installChrome}
-                            disabled={isInstalling}
+                            disabled={isInstalling || status?.installed}
                             className="btn btn-primary flex-1 disabled:opacity-50"
                         >
                             <Download size={18} />
-                            安装 Chrome
-                        </button>
-                        <button
-                            onClick={installDepsOnly}
-                            disabled={isInstalling}
-                            className="btn bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 disabled:opacity-50"
-                        >
-                            <FilePlus size={18} />
-                            仅安装依赖
+                            {status?.installed ? 'Chrome 已安装' : '立即安装 Chrome'}
                         </button>
                     </div>
                 </div>

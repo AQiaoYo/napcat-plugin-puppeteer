@@ -9,6 +9,7 @@ import puppeteer from 'puppeteer-core';
 import type { Browser, Page } from 'puppeteer-core';
 import { pluginState } from '../core/state';
 import { getDefaultBrowserPaths } from '../config';
+import { getDefaultInstallPath, getChromeExecutablePath } from './chrome-installer';
 import type {
     ScreenshotOptions,
     RenderResult,
@@ -172,6 +173,15 @@ function findBrowserPath(configPath?: string, suppressLog = false): string | und
     // 优先使用配置的路径
     if (configPath && fs.existsSync(configPath)) {
         return configPath;
+    }
+
+    // 检查安装程序安装的路径
+    const installedPath = getChromeExecutablePath(getDefaultInstallPath());
+    if (installedPath && fs.existsSync(installedPath)) {
+        if (!suppressLog) {
+            pluginState.log('info', `检测到已安装的集成浏览器: ${installedPath}`);
+        }
+        return installedPath;
     }
 
     // 自动检测系统浏览器
