@@ -61,7 +61,6 @@ export default function SettingsPage() {
     const [showUninstallConfirm, setShowUninstallConfirm] = useState(false)
     const progressTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
     const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-    const resetConfirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
     const loadChromeStatus = useCallback(async () => {
         try {
@@ -184,78 +183,57 @@ export default function SettingsPage() {
         debounceSave()
     }, [config, debounceSave])
 
-    const handleResetClick = () => {
+    const handleResetClick = async () => {
         if (showResetConfirm) {
-            // 确认重置
-            doResetSettings()
+            // 第二次点击，执行重置
+            setShowResetConfirm(false)
+            showToast('正在恢复默认配置...', 'info')
+
+            // 设置本地状态为默认值
+            const newConfig = {
+                maxPages: defaultSettings.maxPages,
+                lockTimeout: defaultSettings.lockTimeout,
+                executablePath: '',
+                browserWSEndpoint: '',
+                browserArgs: '',
+                headless: true,
+                defaultWidth: defaultSettings.defaultWidth,
+                defaultHeight: defaultSettings.defaultHeight,
+                defaultScale: defaultSettings.defaultScale,
+                debug: false,
+                autoStart: defaultSettings.autoStart,
+            }
+            setConfig(newConfig)
+
+            try {
+                // 保存到后端
+                await authFetch('/config', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        enabled: newConfig.autoStart,
+                        debug: false,
+                        browser: {
+                            maxPages: newConfig.maxPages,
+                            timeout: newConfig.lockTimeout,
+                            executablePath: '',
+                            browserWSEndpoint: '',
+                            args: [],
+                            headless: true,
+                            defaultViewportWidth: newConfig.defaultWidth,
+                            defaultViewportHeight: newConfig.defaultHeight,
+                            deviceScaleFactor: newConfig.defaultScale,
+                        },
+                    }),
+                })
+                showToast('已恢复默认配置', 'success')
+            } catch (e) {
+                showToast('恢复默认配置失败: ' + (e as Error).message, 'error')
+            }
         } else {
-            // 显示确认状态
+            // 第一次点击，显示确认状态
             setShowResetConfirm(true)
-            // 5秒后自动取消确认状态
-            if (resetConfirmTimerRef.current) {
-                clearTimeout(resetConfirmTimerRef.current)
-            }
-            resetConfirmTimerRef.current = setTimeout(() => {
-                setShowResetConfirm(false)
-            }, 5000)
-        }
-    }
-
-    const cancelReset = () => {
-        setShowResetConfirm(false)
-        if (resetConfirmTimerRef.current) {
-            clearTimeout(resetConfirmTimerRef.current)
-        }
-    }
-
-    const doResetSettings = async () => {
-        setShowResetConfirm(false)
-        if (resetConfirmTimerRef.current) {
-            clearTimeout(resetConfirmTimerRef.current)
-        }
-        showToast('正在恢复默认配置...', 'info')
-
-        // 设置本地状态为默认值
-        const newConfig = {
-            maxPages: defaultSettings.maxPages,
-            lockTimeout: defaultSettings.lockTimeout,
-            executablePath: defaultSettings.executablePath,
-            browserWSEndpoint: defaultSettings.browserWSEndpoint,
-            browserArgs: defaultSettings.browserArgs,
-            headless: defaultSettings.headless,
-            defaultWidth: defaultSettings.defaultWidth,
-            defaultHeight: defaultSettings.defaultHeight,
-            defaultScale: defaultSettings.defaultScale,
-            debug: defaultSettings.debug,
-            autoStart: defaultSettings.autoStart,
-        }
-        setConfig(newConfig)
-
-        // 保存到后端
-        try {
-            const configData = {
-                enabled: newConfig.autoStart,
-                browser: {
-                    maxPages: newConfig.maxPages,
-                    timeout: newConfig.lockTimeout,
-                    headless: newConfig.headless,
-                    executablePath: newConfig.executablePath || undefined,
-                    browserWSEndpoint: newConfig.browserWSEndpoint || undefined,
-                    args: newConfig.browserArgs ? newConfig.browserArgs.split(',').map(s => s.trim()).filter(Boolean) : [],
-                    defaultViewportWidth: newConfig.defaultWidth,
-                    defaultViewportHeight: newConfig.defaultHeight,
-                    deviceScaleFactor: newConfig.defaultScale,
-                },
-                debug: newConfig.debug,
-            }
-            await authFetch('/config', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(configData),
-            })
-            showToast('已恢复默认配置', 'success')
-        } catch (e) {
-            showToast('恢复默认配置失败: ' + (e as Error).message, 'error')
+            // 3秒后自动取消确认状态
+            setTimeout(() => setShowResetConfirm(false), 3000)
         }
     }
 
@@ -319,35 +297,6 @@ export default function SettingsPage() {
 
     return (
         <div className="max-w-4xl mx-auto space-y-6 pb-24">
-            {/* Header Actions */}
-            <div className="flex justify-end gap-3 mb-2">
-                {showResetConfirm ? (
-                    <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-4 duration-200">
-                        <span className="text-sm text-red-500 font-medium">确认重置所有配置？</span>
-                        <button
-                            onClick={doResetSettings}
-                            className="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-md text-xs font-bold transition-colors shadow-sm"
-                        >
-                            确认重置
-                        </button>
-                        <button
-                            onClick={cancelReset}
-                            className="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 px-3 py-1.5 rounded-md text-xs font-bold transition-colors"
-                        >
-                            取消
-                        </button>
-                    </div>
-                ) : (
-                    <button
-                        onClick={handleResetClick}
-                        className="flex items-center gap-1.5 text-gray-500 hover:text-red-500 transition-colors px-3 py-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/10"
-                    >
-                        <AlertCircle size={14} />
-                        <span className="text-xs font-bold">重置配置</span>
-                    </button>
-                )}
-            </div>
-
             {/* Browser Settings */}
             <div className="bg-white dark:bg-[#1a1b1d] rounded-lg border border-gray-200 dark:border-gray-800 p-6">
                 <div className="flex items-center gap-3 mb-6 border-b border-gray-100 dark:border-gray-800 pb-4">
@@ -538,6 +487,25 @@ export default function SettingsPage() {
                             />
                             <div className="slider"></div>
                         </label>
+                    </div>
+
+                    {/* 重置配置 */}
+                    <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-[#202124] rounded-md border border-gray-100 dark:border-gray-800">
+                        <div>
+                            <div className="font-medium text-sm text-gray-900 dark:text-gray-200">重置配置</div>
+                            <div className="text-xs text-gray-500">恢复所有设置为默认值</div>
+                        </div>
+                        <button
+                            onClick={handleResetClick}
+                            className={`btn text-xs px-3 py-1.5 border shadow-none transition-all ${showResetConfirm
+                                ? 'bg-red-600 hover:bg-red-700 text-white border-red-600 animate-pulse'
+                                : 'bg-red-50 hover:bg-red-100 dark:bg-red-900/10 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 border-red-200 dark:border-red-900/30'
+                                }`}
+                            title="恢复所有设置为默认值"
+                        >
+                            <AlertCircle size={14} className="mr-1.5 inline" />
+                            {showResetConfirm ? '再次点击确认重置' : '重置配置'}
+                        </button>
                     </div>
                 </div>
             </div>
