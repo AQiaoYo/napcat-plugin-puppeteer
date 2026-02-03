@@ -3,8 +3,6 @@
  * 定义截图渲染相关的所有接口和类型
  */
 
-import type { PluginConfigSchema } from 'napcat-types/napcat-onebot/network/plugin-manger';
-
 // ==================== 截图编码类型 ====================
 
 /**
@@ -295,6 +293,3 @@ export interface ApiResponse<T = any> {
     /** 错误消息 */
     message?: string;
 }
-
-/** 框架配置 UI Schema 变量，NapCat WebUI 会读取此导出 */
-export let plugin_config_ui: PluginConfigSchema = [];
