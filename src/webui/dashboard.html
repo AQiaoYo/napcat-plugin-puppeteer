@@ -522,6 +522,17 @@
                     </svg>
                     <span>设置</span>
                 </div>
+                <div class="sidebar-item" onclick="switchPage('chrome', this)">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <circle cx="12" cy="12" r="4"></circle>
+                        <line x1="21.17" y1="8" x2="12" y2="8"></line>
+                        <line x1="3.95" y1="6.06" x2="8.54" y2="14"></line>
+                        <line x1="10.88" y1="21.94" x2="15.46" y2="14"></line>
+                    </svg>
+                    <span>Chrome 安装</span>
+                </div>
             </nav>
 
             <div class="px-4 pb-2">
@@ -1613,6 +1624,218 @@ const result = await response.json();
                             </div>
                         </div>
                     </div>
+
+                    <!-- Page: Chrome Install -->
+                    <div id="page-chrome" class="page-content">
+                        <div class="max-w-3xl mx-auto space-y-6">
+                            <!-- 环境信息 -->
+                            <div class="glass-card p-6">
+                                <div class="flex items-center gap-3 mb-6">
+                                    <div
+                                        class="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center text-blue-500">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                            stroke-linejoin="round">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                            <line x1="12" y1="16" x2="12" y2="12"></line>
+                                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-bold text-lg">系统环境</h3>
+                                        <p class="text-sm text-gray-500">当前运行环境信息</p>
+                                    </div>
+                                </div>
+
+                                <div class="grid md:grid-cols-2 gap-4 text-sm">
+                                    <div class="flex justify-between p-3 bg-gray-50 dark:bg-[#202124] rounded-lg">
+                                        <span class="text-gray-500">操作系统</span>
+                                        <span class="font-medium" id="chromePlatform">-</span>
+                                    </div>
+                                    <div class="flex justify-between p-3 bg-gray-50 dark:bg-[#202124] rounded-lg">
+                                        <span class="text-gray-500">系统架构</span>
+                                        <span class="font-medium" id="chromeArch">-</span>
+                                    </div>
+                                    <div class="flex justify-between p-3 bg-gray-50 dark:bg-[#202124] rounded-lg">
+                                        <span class="text-gray-500">Linux 发行版</span>
+                                        <span class="font-medium" id="chromeDistro">-</span>
+                                    </div>
+                                    <div class="flex justify-between p-3 bg-gray-50 dark:bg-[#202124] rounded-lg">
+                                        <span class="text-gray-500">推荐版本</span>
+                                        <span class="font-medium font-mono text-xs" id="chromeDefaultVersion">-</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Chrome 状态 -->
+                            <div class="glass-card p-6">
+                                <div class="flex items-center gap-3 mb-6">
+                                    <div
+                                        class="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center text-green-500">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                            stroke-linejoin="round">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                            <circle cx="12" cy="12" r="4"></circle>
+                                            <line x1="21.17" y1="8" x2="12" y2="8"></line>
+                                            <line x1="3.95" y1="6.06" x2="8.54" y2="14"></line>
+                                            <line x1="10.88" y1="21.94" x2="15.46" y2="14"></line>
+                                        </svg>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h3 class="font-bold text-lg">Chrome 状态</h3>
+                                        <p class="text-sm text-gray-500">本地 Chrome 浏览器安装状态</p>
+                                    </div>
+                                    <button onclick="loadChromeStatus()"
+                                        class="btn text-sm py-1.5 px-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                            stroke-linejoin="round">
+                                            <polyline points="23 4 23 10 17 10"></polyline>
+                                            <polyline points="1 20 1 14 7 14"></polyline>
+                                            <path
+                                                d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15">
+                                            </path>
+                                        </svg>
+                                        刷新
+                                    </button>
+                                </div>
+
+                                <div id="chromeStatusContent">
+                                    <div class="flex items-center justify-center p-8 text-gray-400">
+                                        <div
+                                            class="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mr-3">
+                                        </div>
+                                        加载中...
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 安装选项 -->
+                            <div class="glass-card p-6">
+                                <div class="flex items-center gap-3 mb-6">
+                                    <div
+                                        class="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center text-purple-500">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                            stroke-linejoin="round">
+                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                            <polyline points="7 10 12 15 17 10"></polyline>
+                                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-bold text-lg">安装 Chrome</h3>
+                                        <p class="text-sm text-gray-500">下载并安装 Chrome for Testing</p>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-4">
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label
+                                                class="text-xs font-semibold text-gray-500 uppercase mb-2 block">Chrome
+                                                版本</label>
+                                            <input id="chromeVersion" type="text" class="input-field font-mono text-sm"
+                                                placeholder="131.0.6778.204" />
+                                            <p class="text-xs text-gray-400 mt-1">留空使用推荐版本</p>
+                                        </div>
+                                        <div>
+                                            <label
+                                                class="text-xs font-semibold text-gray-500 uppercase mb-2 block">下载源</label>
+                                            <select id="chromeSource" class="input-field">
+                                                <option value="NPMMIRROR">NPM 镜像 (国内推荐)</option>
+                                                <option value="GOOGLE">Google 官方源</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div
+                                        class="flex items-center justify-between p-4 bg-gray-50 dark:bg-[#202124] rounded-lg">
+                                        <div>
+                                            <div class="font-medium">安装系统依赖</div>
+                                            <div class="text-sm text-gray-500">自动安装 Chrome 运行所需的系统库（仅 Linux）</div>
+                                        </div>
+                                        <label class="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" id="chromeInstallDeps" class="sr-only peer" checked>
+                                            <div
+                                                class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-pink-300 dark:peer-focus:ring-pink-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary">
+                                            </div>
+                                        </label>
+                                    </div>
+
+                                    <!-- 进度条 -->
+                                    <div id="chromeProgressContainer" class="hidden">
+                                        <div class="mb-2 flex justify-between text-sm">
+                                            <span id="chromeProgressText"
+                                                class="text-gray-600 dark:text-gray-400">准备中...</span>
+                                            <span id="chromeProgressPercent" class="font-mono text-primary">0%</span>
+                                        </div>
+                                        <div
+                                            class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
+                                            <div id="chromeProgressBar"
+                                                class="bg-primary h-3 rounded-full transition-all duration-300"
+                                                style="width: 0%"></div>
+                                        </div>
+                                        <div id="chromeProgressDetails" class="mt-2 text-xs text-gray-500 font-mono">
+                                        </div>
+                                    </div>
+
+                                    <div class="flex gap-3 pt-2">
+                                        <button id="btnInstallChrome" onclick="installChrome()"
+                                            class="btn btn-primary flex-1">
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                                                stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                                stroke-linejoin="round">
+                                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                                <polyline points="7 10 12 15 17 10"></polyline>
+                                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                                            </svg>
+                                            安装 Chrome
+                                        </button>
+                                        <button id="btnInstallDeps" onclick="installDepsOnly()"
+                                            class="btn bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200">
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                                                stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                                stroke-linejoin="round">
+                                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z">
+                                                </path>
+                                                <polyline points="14 2 14 8 20 8"></polyline>
+                                                <line x1="12" y1="18" x2="12" y2="12"></line>
+                                                <line x1="9" y1="15" x2="15" y2="15"></line>
+                                            </svg>
+                                            仅安装依赖
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Docker 提示 -->
+                            <div
+                                class="glass-card p-4 bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800">
+                                <div class="flex gap-3">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                        class="text-blue-500 flex-shrink-0 mt-0.5">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                                    </svg>
+                                    <div class="text-sm text-blue-800 dark:text-blue-200">
+                                        <p class="font-medium mb-1">Docker 环境说明</p>
+                                        <ul
+                                            class="list-disc list-inside text-xs space-y-1 text-blue-700 dark:text-blue-300">
+                                            <li>本功能专为 NapCat Docker 环境 (Ubuntu 22.04) 设计</li>
+                                            <li>安装过程会自动下载 Chrome for Testing 并配置系统依赖</li>
+                                            <li>安装完成后会自动更新浏览器路径配置</li>
+                                            <li>如果容器重启，可能需要重新安装（建议挂载数据卷持久化）</li>
+                                            <li>也可以使用远程浏览器（如 browserless/chrome）替代本地安装</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </main>
         </div>
@@ -1717,7 +1940,8 @@ const result = await response.json();
                 'status': ['运行状态', '查看插件和服务概览'],
                 'test': ['渲染测试', '测试 HTML 渲染效果'],
                 'api': ['API 文档', '接口调用参考'],
-                'settings': ['设置', '插件配置管理']
+                'settings': ['设置', '插件配置管理'],
+                'chrome': ['Chrome 安装', '安装和管理 Chrome 浏览器']
             };
             document.getElementById('pageTitle').textContent = docMap[pageId][0];
             document.getElementById('pageDesc').textContent = docMap[pageId][1];
@@ -1731,6 +1955,11 @@ const result = await response.json();
                 headerSettingsActions.classList.remove('hidden');
                 headerSettingsActions.classList.add('flex');
                 loadSettings();
+            } else if (pageId === 'chrome') {
+                headerStatus.classList.add('hidden');
+                headerSettingsActions.classList.add('hidden');
+                headerSettingsActions.classList.remove('flex');
+                loadChromeStatus();
             } else {
                 headerStatus.classList.remove('hidden');
                 headerSettingsActions.classList.add('hidden');
@@ -2109,7 +2338,7 @@ const result = await response.json();
 
         // Reset settings to default
         async function resetSettings() {
-            if (!confirm('确定要恢复默认配置吗？此操作不可撤销。')) return;
+            showToast('正在恢复默认配置...', 'info');
 
             document.getElementById('settingsMaxPages').value = defaultSettings.maxPages;
             document.getElementById('settingsLockTimeout').value = defaultSettings.lockTimeout;
@@ -2126,6 +2355,231 @@ const result = await response.json();
             // 立即保存恢复后的默认值
             await saveSettings(false);
             showToast('已恢复默认配置', 'success');
+        }
+
+        // === Chrome Install Logic ===
+
+        let chromeProgressTimer = null;
+
+        // 加载 Chrome 状态
+        async function loadChromeStatus() {
+            try {
+                const data = await noAuthFetch('/chrome/status');
+                if (data.code === 0) {
+                    const info = data.data;
+
+                    // 更新环境信息
+                    document.getElementById('chromePlatform').textContent = info.platform || '-';
+                    document.getElementById('chromeArch').textContent = info.arch || '-';
+                    document.getElementById('chromeDistro').textContent = info.linuxDistro || '-';
+                    document.getElementById('chromeDefaultVersion').textContent = info.defaultVersion || '-';
+
+                    // 设置默认版本到输入框
+                    const versionInput = document.getElementById('chromeVersion');
+                    if (!versionInput.value) {
+                        versionInput.placeholder = info.defaultVersion || '131.0.6778.204';
+                    }
+
+                    // 更新状态内容
+                    const statusContent = document.getElementById('chromeStatusContent');
+                    if (info.installed) {
+                        statusContent.innerHTML = `
+                            <div class="space-y-3">
+                                <div class="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/10 rounded-lg border border-green-200 dark:border-green-800">
+                                    <div class="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center text-green-500">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <polyline points="20 6 9 17 4 12"></polyline>
+                                        </svg>
+                                    </div>
+                                    <div class="flex-1">
+                                        <div class="font-medium text-green-800 dark:text-green-200">Chrome 已安装</div>
+                                        <div class="text-sm text-green-600 dark:text-green-400">${info.version || '版本未知'}</div>
+                                    </div>
+                                </div>
+                                <div class="text-sm">
+                                    <div class="flex justify-between p-3 bg-gray-50 dark:bg-[#202124] rounded-lg">
+                                        <span class="text-gray-500">可执行文件</span>
+                                        <span class="font-mono text-xs truncate max-w-[300px]" title="${info.executablePath || ''}">${info.executablePath || '-'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        statusContent.innerHTML = `
+                            <div class="flex items-center gap-3 p-4 bg-amber-50 dark:bg-amber-900/10 rounded-lg border border-amber-200 dark:border-amber-800">
+                                <div class="w-10 h-10 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center text-amber-500">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                                    </svg>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="font-medium text-amber-800 dark:text-amber-200">Chrome 未安装</div>
+                                    <div class="text-sm text-amber-600 dark:text-amber-400">请点击下方按钮安装 Chrome</div>
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    // 如果正在安装，显示进度
+                    if (info.isInstalling) {
+                        updateChromeProgress(info.progress);
+                        startProgressPolling();
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to load Chrome status:', e);
+                document.getElementById('chromeStatusContent').innerHTML = `
+                    <div class="text-red-500 p-4 bg-red-50 dark:bg-red-900/10 rounded-lg">
+                        加载状态失败: ${e.message}
+                    </div>
+                `;
+            }
+        }
+
+        // 更新进度显示
+        function updateChromeProgress(progress) {
+            const container = document.getElementById('chromeProgressContainer');
+            const bar = document.getElementById('chromeProgressBar');
+            const text = document.getElementById('chromeProgressText');
+            const percent = document.getElementById('chromeProgressPercent');
+            const details = document.getElementById('chromeProgressDetails');
+            const btnInstall = document.getElementById('btnInstallChrome');
+            const btnDeps = document.getElementById('btnInstallDeps');
+
+            if (!progress || progress.status === 'idle') {
+                container.classList.add('hidden');
+                btnInstall.disabled = false;
+                btnDeps.disabled = false;
+                return;
+            }
+
+            container.classList.remove('hidden');
+
+            // 更新进度条
+            bar.style.width = `${progress.progress || 0}%`;
+            percent.textContent = `${Math.round(progress.progress || 0)}%`;
+            text.textContent = progress.message || '处理中...';
+
+            // 更新详情
+            let detailsText = '';
+            if (progress.downloadedBytes && progress.totalBytes) {
+                const downloaded = (progress.downloadedBytes / 1024 / 1024).toFixed(2);
+                const total = (progress.totalBytes / 1024 / 1024).toFixed(2);
+                detailsText = `${downloaded} MB / ${total} MB`;
+                if (progress.speed) detailsText += ` | ${progress.speed}`;
+                if (progress.eta) detailsText += ` | 剩余 ${progress.eta}`;
+            }
+            details.textContent = detailsText;
+
+            // 根据状态更新按钮
+            if (progress.status === 'completed') {
+                bar.classList.remove('bg-primary');
+                bar.classList.add('bg-green-500');
+                btnInstall.disabled = false;
+                btnDeps.disabled = false;
+                showToast('Chrome 安装完成！', 'success');
+                stopProgressPolling();
+                // 刷新状态
+                setTimeout(loadChromeStatus, 1000);
+            } else if (progress.status === 'failed') {
+                bar.classList.remove('bg-primary');
+                bar.classList.add('bg-red-500');
+                text.textContent = progress.error || '安装失败';
+                btnInstall.disabled = false;
+                btnDeps.disabled = false;
+                showToast('安装失败: ' + (progress.error || '未知错误'), 'error');
+                stopProgressPolling();
+            } else {
+                bar.classList.remove('bg-green-500', 'bg-red-500');
+                bar.classList.add('bg-primary');
+                btnInstall.disabled = true;
+                btnDeps.disabled = true;
+            }
+        }
+
+        // 开始轮询进度
+        function startProgressPolling() {
+            if (chromeProgressTimer) return;
+            chromeProgressTimer = setInterval(async () => {
+                try {
+                    const data = await noAuthFetch('/chrome/progress');
+                    if (data.code === 0) {
+                        updateChromeProgress(data.data.progress);
+                        if (!data.data.isInstalling) {
+                            stopProgressPolling();
+                        }
+                    }
+                } catch (e) {
+                    console.error('Failed to fetch progress:', e);
+                }
+            }, 1000);
+        }
+
+        // 停止轮询进度
+        function stopProgressPolling() {
+            if (chromeProgressTimer) {
+                clearInterval(chromeProgressTimer);
+                chromeProgressTimer = null;
+            }
+        }
+
+        // 安装 Chrome
+        async function installChrome() {
+            const version = document.getElementById('chromeVersion').value.trim();
+            const source = document.getElementById('chromeSource').value;
+            const installDeps = document.getElementById('chromeInstallDeps').checked;
+
+            try {
+                showToast('正在启动安装...', 'info');
+
+                // 重置进度条样式
+                const bar = document.getElementById('chromeProgressBar');
+                bar.classList.remove('bg-green-500', 'bg-red-500');
+                bar.classList.add('bg-primary');
+                bar.style.width = '0%';
+
+                const data = await authFetch('/chrome/install', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        version: version || undefined,
+                        source,
+                        installDeps
+                    })
+                });
+
+                if (data.code === 0) {
+                    showToast('安装任务已启动', 'success');
+                    // 开始轮询进度
+                    startProgressPolling();
+                    // 显示进度条
+                    updateChromeProgress({ status: 'downloading', progress: 0, message: '准备中...' });
+                } else {
+                    showToast('启动安装失败: ' + data.message, 'error');
+                }
+            } catch (e) {
+                showToast('启动安装失败: ' + e.message, 'error');
+            }
+        }
+
+        // 仅安装依赖
+        async function installDepsOnly() {
+            try {
+                showToast('正在安装依赖...', 'info');
+
+                const data = await authFetch('/chrome/install-deps', {
+                    method: 'POST'
+                });
+
+                if (data.code === 0) {
+                    showToast(data.message || '依赖安装任务已启动', 'success');
+                } else {
+                    showToast('安装失败: ' + data.message, 'error');
+                }
+            } catch (e) {
+                showToast('安装失败: ' + e.message, 'error');
+            }
         }
     </script>
 </body>

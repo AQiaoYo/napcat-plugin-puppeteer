@@ -25,6 +25,18 @@ import {
     renderHtml,
     screenshotUrl,
 } from './services/puppeteer-service';
+import {
+    installChrome,
+    getInstallProgress,
+    isInstallingChrome,
+    isChromeInstalled,
+    getInstalledChromeInfo,
+    getDefaultInstallPath,
+    getChromeExecutablePath,
+    installLinuxDependencies,
+    detectLinuxDistro,
+    DEFAULT_CHROME_VERSION,
+} from './services/chrome-installer';
 import type { ScreenshotOptions } from './types';
 
 /** 框架配置 UI Schema，NapCat WebUI 会读取此导出来展示配置面板 */
@@ -343,6 +355,122 @@ const plugin_init = async (ctx: NapCatPluginContext) => {
                     } else {
                         res.status(500).json({ code: -1, message: '重启浏览器失败' });
                     }
+                } catch (e) {
+                    res.status(500).json({ code: -1, message: String(e) });
+                }
+            });
+
+            // ==================== Chrome 安装相关 API ====================
+
+            // 获取 Chrome 安装状态（无认证）
+            router.getNoAuth('/chrome/status', async (_req: any, res: any) => {
+                pluginState.logDebug('API 请求: GET /chrome/status (NoAuth)');
+                try {
+                    const installPath = getDefaultInstallPath();
+                    const info = await getInstalledChromeInfo(installPath);
+                    const distro = await detectLinuxDistro();
+
+                    res.json({
+                        code: 0,
+                        data: {
+                            installed: info.installed,
+                            executablePath: info.executablePath,
+                            version: info.version,
+                            installPath,
+                            isInstalling: isInstallingChrome(),
+                            progress: getInstallProgress(),
+                            platform: process.platform,
+                            arch: process.arch,
+                            linuxDistro: distro,
+                            defaultVersion: DEFAULT_CHROME_VERSION,
+                        }
+                    });
+                } catch (e) {
+                    res.status(500).json({ code: -1, message: String(e) });
+                }
+            });
+
+            // 获取安装进度（无认证）
+            router.getNoAuth('/chrome/progress', (_req: any, res: any) => {
+                pluginState.logDebug('API 请求: GET /chrome/progress (NoAuth)');
+                res.json({
+                    code: 0,
+                    data: {
+                        isInstalling: isInstallingChrome(),
+                        progress: getInstallProgress(),
+                    }
+                });
+            });
+
+            // 安装 Chrome（需认证）
+            router.post('/chrome/install', async (req: any, res: any) => {
+                pluginState.logDebug('API 请求: POST /chrome/install');
+                try {
+                    if (isInstallingChrome()) {
+                        return res.status(400).json({ code: -1, message: '已有安装任务正在进行中' });
+                    }
+
+                    const body = await parseRequestBody(req);
+                    const version = body.version || DEFAULT_CHROME_VERSION;
+                    const installDeps = body.installDeps !== false;
+                    const source = body.source || 'NPMMIRROR';
+
+                    // 异步执行安装，立即返回
+                    res.json({ code: 0, message: '安装任务已启动，请通过 /chrome/progress 查询进度' });
+
+                    // 后台执行安装
+                    installChrome({
+                        version,
+                        source,
+                        installDeps,
+                        onProgress: (progress) => {
+                            pluginState.logDebug('Chrome 安装进度:', JSON.stringify(progress));
+                        },
+                    }).then(async (result) => {
+                        if (result.success && result.executablePath) {
+                            pluginState.log('info', `Chrome 安装成功: ${result.executablePath}`);
+                            // 自动更新配置中的浏览器路径
+                            const currentConfig = pluginState.getConfig();
+                            if (!currentConfig.browser.executablePath) {
+                                pluginState.setConfig(ctx, {
+                                    browser: {
+                                        ...currentConfig.browser,
+                                        executablePath: result.executablePath,
+                                    }
+                                });
+                                pluginState.log('info', '已自动更新浏览器路径配置');
+                            }
+                        } else {
+                            pluginState.log('error', `Chrome 安装失败: ${result.error}`);
+                        }
+                    });
+
+                } catch (e) {
+                    res.status(500).json({ code: -1, message: String(e) });
+                }
+            });
+
+            // 仅安装依赖（需认证）
+            router.post('/chrome/install-deps', async (_req: any, res: any) => {
+                pluginState.logDebug('API 请求: POST /chrome/install-deps');
+                try {
+                    if (process.platform !== 'linux') {
+                        return res.json({ code: 0, message: '非 Linux 系统，无需安装依赖' });
+                    }
+
+                    res.json({ code: 0, message: '依赖安装任务已启动' });
+
+                    // 后台执行
+                    installLinuxDependencies((progress) => {
+                        pluginState.logDebug('依赖安装进度:', JSON.stringify(progress));
+                    }).then((success) => {
+                        if (success) {
+                            pluginState.log('info', '系统依赖安装完成');
+                        } else {
+                            pluginState.log('error', '系统依赖安装失败');
+                        }
+                    });
+
                 } catch (e) {
                     res.status(500).json({ code: -1, message: String(e) });
                 }
