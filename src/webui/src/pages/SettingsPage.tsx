@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Globe, Image, Settings as SettingsIcon, AlertCircle, Download, Check, Info } from 'lucide-react'
+import { Globe, Image, Settings as SettingsIcon, AlertCircle, Download, Check, Info, Monitor, Server } from 'lucide-react'
 import { authFetch, noAuthFetch } from '../utils/api'
 import { showToast } from '../hooks/useToast'
 import type { PluginConfig, ChromeStatus, ChromeProgress } from '../types'
@@ -534,33 +534,126 @@ export default function SettingsPage() {
                 </div>
             </div>
 
-            {/* Chrome Setup - 仅在 Linux 环境下显示 */}
-            {status?.platform === 'linux' && (
-                <div className="glass-card p-6">
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center text-purple-500">
-                            <Download size={20} />
-                        </div>
-                        <div>
-                            <h3 className="font-bold text-lg">环境管理</h3>
-                            <p className="text-sm text-gray-500">NapCat Docker 环境 Chrome 浏览器安装</p>
+            {/* Chrome Setup - 根据平台显示不同内容 */}
+            <div className="glass-card p-6">
+                <div className="flex items-center gap-3 mb-6">
+                    <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center text-purple-500">
+                        <Download size={20} />
+                    </div>
+                    <div>
+                        <h3 className="font-bold text-lg">环境管理</h3>
+                        <p className="text-sm text-gray-500">
+                            {status?.platform === 'win32' ? 'Windows' : status?.platform === 'darwin' ? 'macOS' : 'Linux'}
+                            {status?.arch ? ` (${status.arch})` : ''} 环境浏览器管理
+                        </p>
+                    </div>
+                </div>
+
+                {/* 已安装的浏览器列表 */}
+                {status?.installedBrowsers && status.installedBrowsers.length > 0 && (
+                    <div className="mb-4">
+                        <label className="text-xs font-semibold text-gray-500 uppercase mb-2 block">
+                            <Monitor size={14} className="inline mr-1" />
+                            系统已安装的浏览器
+                        </label>
+                        <div className="space-y-2">
+                            {status.installedBrowsers.map((browser, index) => (
+                                <div
+                                    key={index}
+                                    className="p-3 bg-gray-50 dark:bg-[#202124] rounded-lg border border-gray-200 dark:border-gray-700 flex items-center justify-between"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold ${browser.type === 'chrome' ? 'bg-blue-500' :
+                                            browser.type === 'edge' ? 'bg-green-500' :
+                                                browser.type === 'brave' ? 'bg-orange-500' :
+                                                    'bg-gray-500'
+                                            }`}>
+                                            {browser.type === 'chrome' ? 'C' :
+                                                browser.type === 'edge' ? 'E' :
+                                                    browser.type === 'brave' ? 'B' : 'Cr'}
+                                        </div>
+                                        <div>
+                                            <div className="font-medium text-sm capitalize">
+                                                {browser.type}
+                                                {browser.channel !== 'stable' && (
+                                                    <span className="ml-2 px-1.5 py-0.5 text-[10px] bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400 rounded">
+                                                        {browser.channel}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="text-xs text-gray-500 font-mono truncate max-w-[300px]" title={browser.executablePath}>
+                                                {browser.executablePath}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        {browser.version && (
+                                            <div className="text-xs text-gray-500">{browser.version}</div>
+                                        )}
+                                        <button
+                                            onClick={() => {
+                                                updateConfig('executablePath', browser.executablePath)
+                                                showToast('已选择浏览器路径', 'success')
+                                            }}
+                                            className="text-xs text-primary hover:underline mt-1"
+                                        >
+                                            使用此浏览器
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
+                )}
 
-                    {/* 环境提示 */}
-                    <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/10 rounded-lg border border-blue-200 dark:border-blue-800">
-                        <div className="flex gap-2 text-sm text-blue-700 dark:text-blue-300">
-                            <Info size={16} className="flex-shrink-0 mt-0.5" />
+                {/* 环境提示 */}
+                <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/10 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <div className="flex gap-2 text-sm text-blue-700 dark:text-blue-300">
+                        <Info size={16} className="flex-shrink-0 mt-0.5" />
+                        <div>
+                            <p className="font-medium">环境说明</p>
+                            <p className="text-xs mt-1 text-blue-600 dark:text-blue-400">
+                                {status?.canInstall ? (
+                                    <>
+                                        检测到 {status?.platform === 'win32' ? 'Windows' : status?.platform === 'darwin' ? 'macOS' : 'Linux'}
+                                        {status?.linuxDistro ? ` (${status.linuxDistro})` : ''} 环境，
+                                        支持自动下载安装 Chrome for Testing。
+                                        如果您使用远程浏览器或已配置本地 Chrome 路径，无需使用此功能。
+                                    </>
+                                ) : (
+                                    <>
+                                        {status?.cannotInstallReason || '当前平台不支持自动安装 Chrome'}。
+                                        建议使用远程浏览器连接或手动安装 Chrome/Chromium。
+                                    </>
+                                )}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 远程浏览器推荐 - 当不支持本地安装时显示 */}
+                {!status?.canInstall && (
+                    <div className="mb-4 p-4 bg-green-50 dark:bg-green-900/10 rounded-lg border border-green-200 dark:border-green-800">
+                        <div className="flex gap-3">
+                            <Server size={20} className="text-green-500 flex-shrink-0 mt-0.5" />
                             <div>
-                                <p className="font-medium">Docker 环境说明</p>
-                                <p className="text-xs mt-1 text-blue-600 dark:text-blue-400">
-                                    检测到 Linux 环境 ({status?.linuxDistro || 'unknown'})，此功能用于在 NapCat Docker 容器内安装 Chrome for Testing。
-                                    如果您使用远程浏览器或已配置本地 Chrome 路径，无需使用此功能。
+                                <p className="font-medium text-green-700 dark:text-green-300">推荐：使用远程浏览器</p>
+                                <p className="text-xs mt-1 text-green-600 dark:text-green-400">
+                                    您可以使用 Docker 运行一个独立的 Chrome 容器，然后通过 WebSocket 连接：
+                                </p>
+                                <div className="mt-2 p-2 bg-gray-900 rounded text-xs font-mono text-green-400 overflow-x-auto">
+                                    docker run -d --name chrome -p 3000:3000 browserless/chrome
+                                </div>
+                                <p className="text-xs mt-2 text-green-600 dark:text-green-400">
+                                    然后在上方「远程浏览器地址」填入：<code className="px-1 py-0.5 bg-green-100 dark:bg-green-900/30 rounded">ws://localhost:3000</code>
                                 </p>
                             </div>
                         </div>
                     </div>
+                )}
 
+                {/* Chrome 安装选项 - 仅在支持安装时显示 */}
+                {status?.canInstall && (
                     <div className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
@@ -587,20 +680,23 @@ export default function SettingsPage() {
                             </div>
                         </div>
 
-                        <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-[#202124] rounded-lg">
-                            <div>
-                                <div className="font-medium">安装系统依赖</div>
-                                <div className="text-sm text-gray-500">自动安装 Chrome 运行所需的系统库</div>
+                        {/* 安装依赖选项 - 仅 Linux 显示 */}
+                        {status?.platform === 'linux' && (
+                            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-[#202124] rounded-lg">
+                                <div>
+                                    <div className="font-medium">安装系统依赖</div>
+                                    <div className="text-sm text-gray-500">自动安装 Chrome 运行所需的系统库</div>
+                                </div>
+                                <label className="toggle-switch">
+                                    <input
+                                        type="checkbox"
+                                        checked={installDeps}
+                                        onChange={(e) => setInstallDeps(e.target.checked)}
+                                    />
+                                    <div className="slider"></div>
+                                </label>
                             </div>
-                            <label className="toggle-switch">
-                                <input
-                                    type="checkbox"
-                                    checked={installDeps}
-                                    onChange={(e) => setInstallDeps(e.target.checked)}
-                                />
-                                <div className="slider"></div>
-                            </label>
-                        </div>
+                        )}
 
                         {/* Progress Bar */}
                         {(isInstalling || progress) && progress?.status !== 'idle' && (
@@ -643,8 +739,8 @@ export default function SettingsPage() {
                             )}
                         </div>
                     </div>
-                </div>
-            )}
+                )}
+            </div>
 
         </div>
     )
