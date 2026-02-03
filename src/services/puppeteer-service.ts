@@ -21,6 +21,9 @@ import type {
 /** 浏览器实例 */
 let browser: Browser | null = null;
 
+/** 保活页面（远程模式下防止连接断开） */
+let keepAlivePage: Page | null = null;
+
 /** 当前打开的页面数 */
 let currentPageCount = 0;
 
@@ -99,6 +102,15 @@ async function attemptReconnect(): Promise<boolean> {
         // 重新注册断开事件监听
         setupDisconnectHandler();
 
+        // 创建保活页面
+        try {
+            keepAlivePage = await browser.newPage();
+            await keepAlivePage.goto('about:blank');
+            pluginState.logDebug('已创建保活页面');
+        } catch (error) {
+            pluginState.logDebug('创建保活页面失败:', error);
+        }
+
         stats.startTime = Date.now();
         pluginState.log('info', '远程浏览器重连成功');
         clearReconnectState();
@@ -135,6 +147,7 @@ function setupDisconnectHandler(): void {
         }
 
         browser = null;
+        keepAlivePage = null;
         currentPageCount = 0;
         pageQueue = [];
 
@@ -226,6 +239,15 @@ export async function initBrowser(): Promise<boolean> {
             // 监听浏览器断开事件（带自动重连）
             setupDisconnectHandler();
 
+            // 创建保活页面，防止所有页面关闭时连接断开
+            try {
+                keepAlivePage = await browser.newPage();
+                await keepAlivePage.goto('about:blank');
+                pluginState.logDebug('已创建保活页面');
+            } catch (error) {
+                pluginState.logDebug('创建保活页面失败:', error);
+            }
+
             // 重置重连计数
             clearReconnectState();
 
@@ -288,6 +310,7 @@ export async function closeBrowser(): Promise<void> {
             pluginState.log('error', '关闭浏览器失败:', error);
         } finally {
             browser = null;
+            keepAlivePage = null;
             currentPageCount = 0;
             pageQueue = [];
         }
