@@ -107,6 +107,14 @@
 
 ## 运行前准备
 
+> [!IMPORTANT]
+> **系统要求**
+> - Windows 10 / Windows Server 2016 或更高版本
+> - macOS 10.15 (Catalina) 或更高版本  
+> - Linux x64（不支持 ARM 架构）
+>
+> **不支持的系统**：Windows 7、Windows 8/8.1、Windows Server 2012/2012 R2 等旧版系统无法运行本插件（Puppeteer 不兼容）。如需在旧系统上使用，请通过[远程浏览器](#docker-部署远程浏览器推荐)方式连接。
+
 - 安装 [NapCat](https://napneko.github.io/napcat/) 并启用插件管理功能。
 - 浏览器环境（以下方式任选其一）：
   - **自动安装（推荐）**：插件支持在 WebUI 中一键安装 Chrome for Testing，支持 Windows、macOS、Linux（x64）平台
