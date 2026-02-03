@@ -1,7 +1,8 @@
 /**
  * Chrome 浏览器安装服务
  * 参考 puppeteer-main 项目实现，支持后台下载安装 Chrome
- * 适配 NapCat Docker 环境 (Ubuntu 22.04)
+ * 支持多平台：Windows、macOS、Linux（包括 ARM 架构）
+ * 支持多种 Linux 发行版：Debian/Ubuntu、Fedora/RHEL/CentOS、Arch、openSUSE
  */
 
 import fs from 'fs';
@@ -9,7 +10,7 @@ import path from 'path';
 import os from 'os';
 import http from 'http';
 import https from 'https';
-import { exec, spawn } from 'child_process';
+import { exec, execSync } from 'child_process';
 import { promisify } from 'util';
 import { pluginState } from '../core/state';
 
@@ -57,6 +58,84 @@ export interface InstallOptions {
     onProgress?: (progress: InstallProgress) => void;
 }
 
+// ==================== 平台类型定义 ====================
+
+/** 平台类型 */
+export const Platform = {
+    WIN32: 'win32',
+    WIN64: 'win64',
+    MAC: 'darwin',
+    MAC_ARM: 'darwin_arm',
+    LINUX: 'linux',
+    LINUX_ARM: 'linux_arm',
+} as const;
+
+export type PlatformValue = typeof Platform[keyof typeof Platform];
+
+/** 浏览器类型 */
+export const BrowserType = {
+    CHROME: 'chrome',
+    CHROMIUM: 'chromium',
+    EDGE: 'edge',
+    BRAVE: 'brave',
+} as const;
+
+export type BrowserTypeValue = typeof BrowserType[keyof typeof BrowserType];
+
+/** 浏览器发布渠道 */
+export const ReleaseChannel = {
+    STABLE: 'stable',
+    BETA: 'beta',
+    DEV: 'dev',
+    CANARY: 'canary',
+} as const;
+
+export type ReleaseChannelValue = typeof ReleaseChannel[keyof typeof ReleaseChannel];
+
+/** 浏览器来源 */
+export const BrowserSource = {
+    DEFAULT_PATH: 'Default Path',
+    REGISTRY: 'Registry',
+    PATH_ENVIRONMENT: 'PATH Environment',
+    PUPPETEER_CACHE: 'Puppeteer Cache',
+    PLAYWRIGHT_CACHE: 'Playwright Cache',
+} as const;
+
+export type BrowserSourceValue = typeof BrowserSource[keyof typeof BrowserSource];
+
+/** 浏览器信息 */
+export interface BrowserInfo {
+    type: BrowserTypeValue;
+    executablePath: string;
+    version?: string;
+    source: BrowserSourceValue;
+    channel: ReleaseChannelValue;
+}
+
+// ==================== 平台检测 ====================
+
+/**
+ * 获取当前平台
+ */
+export function getCurrentPlatform(): PlatformValue {
+    const platform = os.platform();
+    const arch = os.arch();
+
+    if (platform === 'win32') {
+        return arch === 'x64' ? Platform.WIN64 : Platform.WIN32;
+    }
+
+    if (platform === 'darwin') {
+        return arch === 'arm64' ? Platform.MAC_ARM : Platform.MAC;
+    }
+
+    if (platform === 'linux') {
+        return arch === 'arm64' || arch === 'arm' ? Platform.LINUX_ARM : Platform.LINUX;
+    }
+
+    return Platform.LINUX;
+}
+
 // ==================== Linux 发行版检测 ====================
 
 export enum LinuxDistroType {
@@ -64,6 +143,7 @@ export enum LinuxDistroType {
     FEDORA = 'fedora',
     SUSE = 'suse',
     ARCH = 'arch',
+    ALPINE = 'alpine',
     UNKNOWN = 'unknown'
 }
 
@@ -79,24 +159,41 @@ export async function detectLinuxDistro(): Promise<LinuxDistroType> {
         if (fs.existsSync('/etc/os-release')) {
             const osRelease = fs.readFileSync('/etc/os-release', 'utf8');
 
+            // Debian/Ubuntu 系列
             if (osRelease.includes('ID=debian') || osRelease.includes('ID=ubuntu') ||
-                osRelease.includes('ID_LIKE=debian')) {
+                osRelease.includes('ID_LIKE=debian') || osRelease.includes('ID_LIKE="debian"') ||
+                osRelease.includes('ID=linuxmint') || osRelease.includes('ID=pop') ||
+                osRelease.includes('ID=elementary') || osRelease.includes('ID=zorin') ||
+                osRelease.includes('ID=kali') || osRelease.includes('ID=parrot')) {
                 return LinuxDistroType.DEBIAN;
             }
 
+            // Fedora/RHEL/CentOS 系列
             if (osRelease.includes('ID=fedora') || osRelease.includes('ID=rhel') ||
-                osRelease.includes('ID=centos') || osRelease.includes('ID_LIKE=fedora')) {
+                osRelease.includes('ID=centos') || osRelease.includes('ID_LIKE=fedora') ||
+                osRelease.includes('ID_LIKE="fedora"') || osRelease.includes('ID=rocky') ||
+                osRelease.includes('ID=almalinux') || osRelease.includes('ID=ol') ||
+                osRelease.includes('ID=amzn')) {
                 return LinuxDistroType.FEDORA;
             }
 
+            // openSUSE 系列
             if (osRelease.includes('ID=opensuse') || osRelease.includes('ID_LIKE=opensuse') ||
-                osRelease.includes('ID=suse')) {
+                osRelease.includes('ID_LIKE="opensuse"') || osRelease.includes('ID=suse') ||
+                osRelease.includes('ID=sles')) {
                 return LinuxDistroType.SUSE;
             }
 
+            // Arch 系列
             if (osRelease.includes('ID=arch') || osRelease.includes('ID=manjaro') ||
-                osRelease.includes('ID_LIKE=arch')) {
+                osRelease.includes('ID_LIKE=arch') || osRelease.includes('ID_LIKE="arch"') ||
+                osRelease.includes('ID=endeavouros') || osRelease.includes('ID=garuda')) {
                 return LinuxDistroType.ARCH;
+            }
+
+            // Alpine Linux
+            if (osRelease.includes('ID=alpine')) {
+                return LinuxDistroType.ALPINE;
             }
         }
 
@@ -112,8 +209,23 @@ export async function detectLinuxDistro(): Promise<LinuxDistroType> {
         } catch { }
 
         try {
+            await execAsync('yum --version');
+            return LinuxDistroType.FEDORA;
+        } catch { }
+
+        try {
             await execAsync('pacman --version');
             return LinuxDistroType.ARCH;
+        } catch { }
+
+        try {
+            await execAsync('zypper --version');
+            return LinuxDistroType.SUSE;
+        } catch { }
+
+        try {
+            await execAsync('apk --version');
+            return LinuxDistroType.ALPINE;
         } catch { }
 
         return LinuxDistroType.UNKNOWN;
@@ -159,6 +271,113 @@ const DEBIAN_CHROME_DEPS = [
     'fonts-wqy-zenhei',
 ];
 
+/** Chrome 在 Fedora/RHEL/CentOS 上的依赖 */
+const FEDORA_CHROME_DEPS = [
+    'alsa-lib',
+    'atk',
+    'at-spi2-atk',
+    'at-spi2-core',
+    'cairo',
+    'cups-libs',
+    'dbus-libs',
+    'expat',
+    'glib2',
+    'gtk3',
+    'libdrm',
+    'libgbm',
+    'libX11',
+    'libxcb',
+    'libXcomposite',
+    'libXdamage',
+    'libXext',
+    'libXfixes',
+    'libxkbcommon',
+    'libXrandr',
+    'nspr',
+    'nss',
+    'pango',
+    'wget',
+    'xdg-utils',
+    // 中文字体
+    'google-noto-cjk-fonts',
+    'wqy-zenhei-fonts',
+];
+
+/** Chrome 在 Arch Linux 上的依赖 */
+const ARCH_CHROME_DEPS = [
+    'alsa-lib',
+    'atk',
+    'at-spi2-atk',
+    'at-spi2-core',
+    'cairo',
+    'cups',
+    'dbus',
+    'expat',
+    'glib2',
+    'gtk3',
+    'libdrm',
+    'libx11',
+    'libxcb',
+    'libxcomposite',
+    'libxdamage',
+    'libxext',
+    'libxfixes',
+    'libxkbcommon',
+    'libxrandr',
+    'mesa',
+    'nspr',
+    'nss',
+    'pango',
+    'wget',
+    'xdg-utils',
+    // 中文字体
+    'noto-fonts-cjk',
+    'wqy-zenhei',
+];
+
+/** Chrome 在 openSUSE 上的依赖 */
+const SUSE_CHROME_DEPS = [
+    'alsa-lib',
+    'atk',
+    'at-spi2-atk',
+    'at-spi2-core',
+    'cairo',
+    'cups-libs',
+    'dbus-1',
+    'expat',
+    'glib2',
+    'gtk3',
+    'libdrm2',
+    'libgbm1',
+    'libX11-6',
+    'libxcb1',
+    'libXcomposite1',
+    'libXdamage1',
+    'libXext6',
+    'libXfixes3',
+    'libxkbcommon0',
+    'libXrandr2',
+    'mozilla-nspr',
+    'mozilla-nss',
+    'pango',
+    'wget',
+    'xdg-utils',
+    // 中文字体
+    'noto-sans-cjk-fonts',
+];
+
+/** Chrome 在 Alpine Linux 上的依赖 */
+const ALPINE_CHROME_DEPS = [
+    'chromium',
+    'nss',
+    'freetype',
+    'harfbuzz',
+    'ca-certificates',
+    'ttf-freefont',
+    // 中文字体
+    'font-noto-cjk',
+];
+
 /**
  * 检查是否有 root/sudo 权限
  */
@@ -188,11 +407,6 @@ export async function installLinuxDependencies(
     const distro = await detectLinuxDistro();
     pluginState.log('info', `检测到 Linux 发行版: ${distro}`);
 
-    if (distro !== LinuxDistroType.DEBIAN) {
-        pluginState.log('warn', '当前仅支持 Debian/Ubuntu 系统的自动依赖安装');
-        return true;
-    }
-
     const hasRoot = await hasRootAccess();
     if (!hasRoot) {
         pluginState.log('warn', '没有 root 权限，跳过依赖安装');
@@ -213,22 +427,116 @@ export async function installLinuxDependencies(
     try {
         const prefix = process.getuid?.() === 0 ? '' : 'sudo ';
 
-        // 更新包列表
-        pluginState.log('info', '更新软件包列表...');
-        await execAsync(`${prefix}apt-get update`);
+        switch (distro) {
+            case LinuxDistroType.DEBIAN: {
+                // Debian/Ubuntu 系列
+                pluginState.log('info', '更新软件包列表 (apt)...');
+                await execAsync(`${prefix}apt-get update`);
 
-        onProgress?.({
-            status: 'installing-deps',
-            progress: 20,
-            message: '正在安装 Chrome 依赖...',
-        });
+                onProgress?.({
+                    status: 'installing-deps',
+                    progress: 20,
+                    message: '正在安装 Chrome 依赖 (apt)...',
+                });
 
-        // 安装依赖
-        pluginState.log('info', '安装 Chrome 依赖...');
-        const depsStr = DEBIAN_CHROME_DEPS.join(' ');
-        await execAsync(`${prefix}apt-get install -y --no-install-recommends ${depsStr}`, {
-            timeout: 300000, // 5 分钟超时
-        });
+                pluginState.log('info', '安装 Chrome 依赖...');
+                const debDepsStr = DEBIAN_CHROME_DEPS.join(' ');
+                await execAsync(`${prefix}apt-get install -y --no-install-recommends ${debDepsStr}`, {
+                    timeout: 300000,
+                });
+                break;
+            }
+
+            case LinuxDistroType.FEDORA: {
+                // Fedora/RHEL/CentOS 系列
+                pluginState.log('info', '安装 Chrome 依赖 (dnf/yum)...');
+
+                onProgress?.({
+                    status: 'installing-deps',
+                    progress: 20,
+                    message: '正在安装 Chrome 依赖 (dnf/yum)...',
+                });
+
+                const fedoraDepsStr = FEDORA_CHROME_DEPS.join(' ');
+                // 尝试使用 dnf，如果失败则使用 yum
+                try {
+                    await execAsync(`${prefix}dnf install -y ${fedoraDepsStr}`, {
+                        timeout: 300000,
+                    });
+                } catch {
+                    await execAsync(`${prefix}yum install -y ${fedoraDepsStr}`, {
+                        timeout: 300000,
+                    });
+                }
+                break;
+            }
+
+            case LinuxDistroType.ARCH: {
+                // Arch Linux 系列
+                pluginState.log('info', '更新软件包数据库 (pacman)...');
+                await execAsync(`${prefix}pacman -Sy --noconfirm`);
+
+                onProgress?.({
+                    status: 'installing-deps',
+                    progress: 20,
+                    message: '正在安装 Chrome 依赖 (pacman)...',
+                });
+
+                pluginState.log('info', '安装 Chrome 依赖...');
+                const archDepsStr = ARCH_CHROME_DEPS.join(' ');
+                await execAsync(`${prefix}pacman -S --noconfirm --needed ${archDepsStr}`, {
+                    timeout: 300000,
+                });
+                break;
+            }
+
+            case LinuxDistroType.SUSE: {
+                // openSUSE 系列
+                pluginState.log('info', '刷新软件源 (zypper)...');
+                await execAsync(`${prefix}zypper refresh`);
+
+                onProgress?.({
+                    status: 'installing-deps',
+                    progress: 20,
+                    message: '正在安装 Chrome 依赖 (zypper)...',
+                });
+
+                pluginState.log('info', '安装 Chrome 依赖...');
+                const suseDepsStr = SUSE_CHROME_DEPS.join(' ');
+                await execAsync(`${prefix}zypper install -y ${suseDepsStr}`, {
+                    timeout: 300000,
+                });
+                break;
+            }
+
+            case LinuxDistroType.ALPINE: {
+                // Alpine Linux
+                pluginState.log('info', '更新软件包索引 (apk)...');
+                await execAsync(`${prefix}apk update`);
+
+                onProgress?.({
+                    status: 'installing-deps',
+                    progress: 20,
+                    message: '正在安装 Chrome 依赖 (apk)...',
+                });
+
+                pluginState.log('info', '安装 Chrome 依赖...');
+                const alpineDepsStr = ALPINE_CHROME_DEPS.join(' ');
+                await execAsync(`${prefix}apk add --no-cache ${alpineDepsStr}`, {
+                    timeout: 300000,
+                });
+                break;
+            }
+
+            default:
+                pluginState.log('warn', `不支持的 Linux 发行版: ${distro}，跳过依赖安装`);
+                onProgress?.({
+                    status: 'installing-deps',
+                    progress: 100,
+                    message: `不支持的发行版 ${distro}，跳过依赖安装`,
+                });
+                return true;
+        }
 
         onProgress?.({
             status: 'installing-deps',
@@ -251,31 +559,685 @@ export async function installLinuxDependencies(
     }
 }
 
+// ==================== 文件工具函数 ====================
+
+/**
+ * 检查文件是否存在且可执行
+ */
+function isExecutable(filePath: string): boolean {
+    try {
+        fs.accessSync(filePath, fs.constants.X_OK);
+        return true;
+    } catch {
+        // Windows 上检查文件是否存在即可
+        if (os.platform() === 'win32') {
+            return fs.existsSync(filePath);
+        }
+        return false;
+    }
+}
+
+/**
+ * 检查路径是否为目录
+ */
+function isDirectory(dirPath: string): boolean {
+    try {
+        return fs.existsSync(dirPath) && fs.statSync(dirPath).isDirectory();
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * 从 Windows 文件属性获取版本
+ */
+function getVersionFromFileProperties(executablePath: string): string | undefined {
+    try {
+        const versionInfo = execSync(
+            `powershell -command "(Get-Item '${executablePath}').VersionInfo.ProductVersion"`,
+            { timeout: 5000, windowsHide: true }
+        ).toString().trim();
+        return versionInfo || undefined;
+    } catch {
+        return undefined;
+    }
+}
+
+/**
+ * 从 Linux 路径推断版本
+ */
+function getVersionFromLinux(executablePath: string): string | undefined {
+    try {
+        const dirName = path.dirname(executablePath);
+        const versionMatch = dirName.match(/(\d+\.\d+\.\d+(\.\d+)?)/);
+        if (versionMatch) {
+            return versionMatch[1];
+        }
+
+        // 尝试读取符号链接
+        try {
+            const linkTarget = fs.readlinkSync(executablePath);
+            if (linkTarget) {
+                const linkVersionMatch = linkTarget.match(/(\d+\.\d+\.\d+(\.\d+)?)/);
+                if (linkVersionMatch) {
+                    return linkVersionMatch[1];
+                }
+            }
+        } catch { }
+
+        return undefined;
+    } catch {
+        return undefined;
+    }
+}
+
+/**
+ * 从 macOS Info.plist 获取版本
+ */
+function getVersionFromMacOS(executablePath: string): string | undefined {
+    try {
+        const appPath = executablePath.match(/(.+?)\.app/);
+        if (appPath && appPath[1]) {
+            const infoPlistPath = `${appPath[1]}.app/Contents/Info.plist`;
+            if (fs.existsSync(infoPlistPath)) {
+                try {
+                    const versionInfo = execSync(
+                        `defaults read "${infoPlistPath}" CFBundleShortVersionString`,
+                        { timeout: 5000 }
+                    ).toString().trim();
+                    if (versionInfo) {
+                        return versionInfo;
+                    }
+                } catch { }
+            }
+        }
+        return undefined;
+    } catch {
+        return undefined;
+    }
+}
+
+/**
+ * 获取浏览器版本
+ */
+function getBrowserVersion(executablePath: string): string | undefined {
+    if (!fs.existsSync(executablePath)) {
+        return undefined;
+    }
+
+    try {
+        switch (os.platform()) {
+            case 'win32':
+                return getVersionFromFileProperties(executablePath);
+            case 'darwin':
+                return getVersionFromMacOS(executablePath);
+            case 'linux':
+                return getVersionFromLinux(executablePath);
+            default:
+                return undefined;
+        }
+    } catch {
+        return undefined;
+    }
+}
+
+// ==================== 浏览器路径定义 ====================
+
+/**
+ * 获取 Chrome 浏览器的默认安装路径
+ */
+function getChromePath(platform: PlatformValue, channel: ReleaseChannelValue = ReleaseChannel.STABLE): string {
+    switch (platform) {
+        case 'win32':
+        case 'win64':
+            switch (channel) {
+                case ReleaseChannel.STABLE:
+                    return path.join(process.env['PROGRAMFILES'] || '', 'Google/Chrome/Application/chrome.exe');
+                case ReleaseChannel.BETA:
+                    return path.join(process.env['PROGRAMFILES'] || '', 'Google/Chrome Beta/Application/chrome.exe');
+                case ReleaseChannel.DEV:
+                    return path.join(process.env['PROGRAMFILES'] || '', 'Google/Chrome Dev/Application/chrome.exe');
+                case ReleaseChannel.CANARY:
+                    return path.join(process.env['PROGRAMFILES'] || '', 'Google/Chrome SxS/Application/chrome.exe');
+            }
+            break;
+        case 'darwin':
+        case 'darwin_arm':
+            switch (channel) {
+                case ReleaseChannel.STABLE:
+                    return '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+                case ReleaseChannel.BETA:
+                    return '/Applications/Google Chrome Beta.app/Contents/MacOS/Google Chrome Beta';
+                case ReleaseChannel.DEV:
+                    return '/Applications/Google Chrome Dev.app/Contents/MacOS/Google Chrome Dev';
+                case ReleaseChannel.CANARY:
+                    return '/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary';
+            }
+            break;
+        case 'linux':
+        case 'linux_arm':
+            switch (channel) {
+                case ReleaseChannel.STABLE:
+                    return '/opt/google/chrome/chrome';
+                case ReleaseChannel.BETA:
+                    return '/opt/google/chrome-beta/chrome';
+                case ReleaseChannel.DEV:
+                    return '/opt/google/chrome-unstable/chrome';
+                case ReleaseChannel.CANARY:
+                    return '/opt/google/chrome-canary/chrome';
+            }
+            break;
+    }
+    return '';
+}
+
+/**
+ * 获取 Chrome 浏览器的所有可能安装路径
+ */
+function getChromePaths(platform: PlatformValue): string[] {
+    const paths: string[] = [];
+
+    // 添加所有渠道的路径
+    Object.values(ReleaseChannel).forEach(channel => {
+        const chromePath = getChromePath(platform, channel);
+        if (chromePath) {
+            paths.push(chromePath);
+        }
+    });
+
+    // 添加额外的可能路径
+    if (platform === 'win32' || platform === 'win64') {
+        paths.push(path.join(process.env['LOCALAPPDATA'] || '', 'Google/Chrome/Application/chrome.exe'));
+        paths.push(path.join(process.env['PROGRAMFILES(X86)'] || '', 'Google/Chrome/Application/chrome.exe'));
+    } else if (platform === 'linux' || platform === 'linux_arm') {
+        paths.push('/usr/bin/google-chrome');
+        paths.push('/usr/bin/google-chrome-stable');
+        paths.push('/usr/bin/chrome');
+        paths.push('/usr/bin/chromium-browser');
+        paths.push('/usr/bin/chromium');
+        paths.push('/snap/bin/chromium');
+        // Alpine Linux
+        paths.push('/usr/bin/chromium-browser');
+    }
+
+    return paths;
+}
+
+/**
+ * 获取 Edge 浏览器的默认安装路径
+ */
+function getEdgePath(platform: PlatformValue, channel: ReleaseChannelValue = ReleaseChannel.STABLE): string {
+    switch (platform) {
+        case 'win32':
+        case 'win64':
+            switch (channel) {
+                case ReleaseChannel.STABLE:
+                    return path.join(process.env['PROGRAMFILES'] || '', 'Microsoft/Edge/Application/msedge.exe');
+                case ReleaseChannel.BETA:
+                    return path.join(process.env['PROGRAMFILES'] || '', 'Microsoft/Edge Beta/Application/msedge.exe');
+                case ReleaseChannel.DEV:
+                    return path.join(process.env['PROGRAMFILES'] || '', 'Microsoft/Edge Dev/Application/msedge.exe');
+                case ReleaseChannel.CANARY:
+                    return path.join(process.env['PROGRAMFILES'] || '', 'Microsoft/Edge SxS/Application/msedge.exe');
+            }
+            break;
+        case 'darwin':
+        case 'darwin_arm':
+            switch (channel) {
+                case ReleaseChannel.STABLE:
+                    return '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge';
+                case ReleaseChannel.BETA:
+                    return '/Applications/Microsoft Edge Beta.app/Contents/MacOS/Microsoft Edge Beta';
+                case ReleaseChannel.DEV:
+                    return '/Applications/Microsoft Edge Dev.app/Contents/MacOS/Microsoft Edge Dev';
+                case ReleaseChannel.CANARY:
+                    return '/Applications/Microsoft Edge Canary.app/Contents/MacOS/Microsoft Edge Canary';
+            }
+            break;
+        case 'linux':
+        case 'linux_arm':
+            switch (channel) {
+                case ReleaseChannel.STABLE:
+                    return '/opt/microsoft/msedge/msedge';
+                case ReleaseChannel.BETA:
+                    return '/opt/microsoft/msedge-beta/msedge';
+                case ReleaseChannel.DEV:
+                    return '/opt/microsoft/msedge-dev/msedge';
+                case ReleaseChannel.CANARY:
+                    return '/opt/microsoft/msedge-canary/msedge';
+            }
+            break;
+    }
+    return '';
+}
+
+/**
+ * 获取 Edge 浏览器的所有可能安装路径
+ */
+function getEdgePaths(platform: PlatformValue): string[] {
+    const paths: string[] = [];
+
+    Object.values(ReleaseChannel).forEach(channel => {
+        const edgePath = getEdgePath(platform, channel);
+        if (edgePath) {
+            paths.push(edgePath);
+        }
+    });
+
+    if (platform === 'win32' || platform === 'win64') {
+        paths.push(path.join(process.env['PROGRAMFILES(X86)'] || '', 'Microsoft/Edge/Application/msedge.exe'));
+    }
+
+    return paths;
+}
+
+/**
+ * 获取 Brave 浏览器的默认安装路径
+ */
+function getBravePath(platform: PlatformValue): string {
+    switch (platform) {
+        case 'win32':
+        case 'win64':
+            return path.join(process.env['PROGRAMFILES'] || '', 'BraveSoftware/Brave-Browser/Application/brave.exe');
+        case 'darwin':
+        case 'darwin_arm':
+            return '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser';
+        case 'linux':
+        case 'linux_arm':
+            return '/opt/brave.com/brave/brave';
+    }
+    return '';
+}
+
+/**
+ * 获取 Brave 浏览器的所有可能安装路径
+ */
+function getBravePaths(platform: PlatformValue): string[] {
+    const paths: string[] = [];
+    const bravePath = getBravePath(platform);
+    if (bravePath) {
+        paths.push(bravePath);
+    }
+
+    if (platform === 'win32' || platform === 'win64') {
+        paths.push(path.join(process.env['LOCALAPPDATA'] || '', 'BraveSoftware/Brave-Browser/Application/brave.exe'));
+        paths.push(path.join(process.env['PROGRAMFILES(X86)'] || '', 'BraveSoftware/Brave-Browser/Application/brave.exe'));
+    } else if (platform === 'linux' || platform === 'linux_arm') {
+        paths.push('/usr/bin/brave');
+        paths.push('/usr/bin/brave-browser');
+        paths.push('/snap/bin/brave');
+    }
+
+    return paths;
+}
+
+// ==================== 浏览器查找函数 ====================
+
+/**
+ * 从 Windows 注册表查找 Chrome
+ */
+function findChromeFromRegistry(): string[] {
+    if (os.platform() !== 'win32') {
+        return [];
+    }
+
+    try {
+        const paths: string[] = [];
+
+        try {
+            const pathValue = execSync(
+                'reg query "HKEY_LOCAL_MACHINE\\Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\chrome.exe" /ve',
+                { windowsHide: true, stdio: ['ignore', 'pipe', 'ignore'] }
+            ).toString().trim();
+
+            const pathMatch = pathValue.match(/REG_SZ\s+(.*)$/m);
+            if (pathMatch && pathMatch[1]) {
+                const chromePath = pathMatch[1].trim();
+                if (chromePath && !paths.includes(chromePath)) {
+                    paths.push(chromePath);
+                }
+            }
+        } catch { }
+
+        return paths;
+    } catch {
+        return [];
+    }
+}
+
+/**
+ * 从环境变量 PATH 查找浏览器
+ */
+function findBrowserFromPath(): string[] {
+    try {
+        const paths: string[] = [];
+        const envPath = process.env.PATH || '';
+        const pathDirs = envPath.split(path.delimiter).filter(Boolean);
+        const platform = os.platform();
+
+        const executableNames = platform === 'win32'
+            ? ['chrome.exe', 'chromium.exe', 'chromium-browser.exe', 'msedge.exe', 'brave.exe']
+            : ['google-chrome', 'chromium', 'chromium-browser', 'msedge', 'brave', 'brave-browser'];
+
+        for (const dir of pathDirs) {
+            for (const browserName of executableNames) {
+                const browserPath = path.join(dir, browserName);
+                if (isExecutable(browserPath) && !paths.includes(browserPath)) {
+                    paths.push(browserPath);
+                }
+            }
+        }
+
+        return paths;
+    } catch {
+        return [];
+    }
+}
+
+/**
+ * 从 Puppeteer 缓存查找 Chrome
+ */
+function findChromeFromPuppeteer(): string[] {
+    try {
+        const paths: string[] = [];
+        const browserName = (() => {
+            if (os.platform() === 'win32') {
+                return 'chrome.exe';
+            } else if (os.platform() === 'darwin') {
+                return 'Chromium.app/Contents/MacOS/Chromium';
+            } else {
+                return 'chrome';
+            }
+        })();
+
+        const PUPPETEER_CACHE_DIR = path.join(os.homedir(), '.cache', 'puppeteer');
+
+        if (!fs.existsSync(PUPPETEER_CACHE_DIR)) {
+            return paths;
+        }
+
+        const revisions = fs.readdirSync(PUPPETEER_CACHE_DIR);
+        for (const revision of revisions) {
+            const revisionPath = path.join(PUPPETEER_CACHE_DIR, revision);
+            if (!isDirectory(revisionPath)) continue;
+
+            const versionList = fs.readdirSync(revisionPath);
+            for (const version of versionList) {
+                const versionPath = path.join(revisionPath, version);
+                if (!isDirectory(versionPath)) continue;
+
+                const platformList = fs.readdirSync(versionPath);
+                for (const platformDir of platformList) {
+                    const platformPath = path.join(versionPath, platformDir);
+                    if (!isDirectory(platformPath)) continue;
+
+                    const browserPath = path.join(platformPath, browserName);
+                    if (isExecutable(browserPath)) {
+                        paths.push(browserPath);
+                    }
+                }
+            }
+        }
+
+        return paths;
+    } catch {
+        return [];
+    }
+}
+
+/**
+ * 从 Playwright 缓存查找 Chrome
+ */
+function findChromeFromPlaywright(): string[] {
+    try {
+        const paths: string[] = [];
+        const PLAYWRIGHT_CACHE_DIR = path.join(os.homedir(), '.cache', 'ms-playwright');
+
+        if (!fs.existsSync(PLAYWRIGHT_CACHE_DIR)) {
+            return paths;
+        }
+
+        const browserDir = 'chromium-';
+        let executableName: string;
+
+        if (os.platform() === 'win32') {
+            executableName = 'chrome.exe';
+        } else if (os.platform() === 'darwin') {
+            executableName = 'Chromium.app/Contents/MacOS/Chromium';
+        } else {
+            executableName = 'chrome';
+        }
+
+        const browserDirs = fs.readdirSync(PLAYWRIGHT_CACHE_DIR)
+            .filter(dir => dir.startsWith(browserDir));
+
+        for (const dir of browserDirs) {
+            const browserPath = path.join(PLAYWRIGHT_CACHE_DIR, dir, executableName);
+            if (isExecutable(browserPath)) {
+                paths.push(browserPath);
+            }
+        }
+
+        return paths;
+    } catch {
+        return [];
+    }
+}
+
+/**
+ * 比较版本号
+ */
+function compareVersions(a?: string, b?: string): number {
+    if (!a) return 1;
+    if (!b) return -1;
+    if (a === b) return 0;
+
+    const aParts = a.split('.').map(Number);
+    const bParts = b.split('.').map(Number);
+
+    const maxLength = Math.max(aParts.length, bParts.length);
+    for (let i = 0; i < maxLength; i++) {
+        const aPart = aParts[i] || 0;
+        const bPart = bParts[i] || 0;
+
+        if (aPart > bPart) return -1;
+        if (aPart < bPart) return 1;
+    }
+
+    return 0;
+}
+
+/**
+ * 查找系统中已安装的所有浏览器
+ */
+export function findInstalledBrowsers(): BrowserInfo[] {
+    const results: BrowserInfo[] = [];
+    const platform = getCurrentPlatform();
+
+    // 1. 从固定路径查找 Chrome
+    const chromePaths = getChromePaths(platform);
+    for (const browserPath of chromePaths) {
+        if (isExecutable(browserPath)) {
+            let channel: ReleaseChannelValue = ReleaseChannel.STABLE;
+            if (browserPath.includes('Beta')) {
+                channel = ReleaseChannel.BETA;
+            } else if (browserPath.includes('Dev') || browserPath.includes('unstable')) {
+                channel = ReleaseChannel.DEV;
+            } else if (browserPath.includes('SxS') || browserPath.includes('Canary')) {
+                channel = ReleaseChannel.CANARY;
+            }
+
+            results.push({
+                type: BrowserType.CHROME,
+                executablePath: browserPath,
+                version: getBrowserVersion(browserPath),
+                source: BrowserSource.DEFAULT_PATH,
+                channel,
+            });
+        }
+    }
+
+    // 2. 从固定路径查找 Edge
+    const edgePaths = getEdgePaths(platform);
+    for (const browserPath of edgePaths) {
+        if (isExecutable(browserPath) && !results.some(r => r.executablePath === browserPath)) {
+            let channel: ReleaseChannelValue = ReleaseChannel.STABLE;
+            if (browserPath.includes('Beta')) {
+                channel = ReleaseChannel.BETA;
+            } else if (browserPath.includes('Dev')) {
+                channel = ReleaseChannel.DEV;
+            } else if (browserPath.includes('SxS') || browserPath.includes('Canary')) {
+                channel = ReleaseChannel.CANARY;
+            }
+
+            results.push({
+                type: BrowserType.EDGE,
+                executablePath: browserPath,
+                version: getBrowserVersion(browserPath),
+                source: BrowserSource.DEFAULT_PATH,
+                channel,
+            });
+        }
+    }
+
+    // 3. 从固定路径查找 Brave
+    const bravePaths = getBravePaths(platform);
+    for (const browserPath of bravePaths) {
+        if (isExecutable(browserPath) && !results.some(r => r.executablePath === browserPath)) {
+            results.push({
+                type: BrowserType.BRAVE,
+                executablePath: browserPath,
+                version: getBrowserVersion(browserPath),
+                source: BrowserSource.DEFAULT_PATH,
+                channel: ReleaseChannel.STABLE,
+            });
+        }
+    }
+
+    // 4. 从注册表查找 (仅 Windows)
+    if (os.platform() === 'win32') {
+        const registryPaths = findChromeFromRegistry();
+        for (const browserPath of registryPaths) {
+            if (isExecutable(browserPath) && !results.some(r => r.executablePath === browserPath)) {
+                results.push({
+                    type: BrowserType.CHROME,
+                    executablePath: browserPath,
+                    version: getBrowserVersion(browserPath),
+                    source: BrowserSource.REGISTRY,
+                    channel: ReleaseChannel.STABLE,
+                });
+            }
+        }
+    }
+
+    // 5. 从环境变量 PATH 查找
+    const envPaths = findBrowserFromPath();
+    for (const browserPath of envPaths) {
+        if (!results.some(r => r.executablePath === browserPath)) {
+            let type: BrowserTypeValue = BrowserType.CHROME;
+            if (browserPath.includes('msedge') || browserPath.includes('edge')) {
+                type = BrowserType.EDGE;
+            } else if (browserPath.includes('brave')) {
+                type = BrowserType.BRAVE;
+            } else if (browserPath.includes('chromium')) {
+                type = BrowserType.CHROMIUM;
+            }
+
+            results.push({
+                type,
+                executablePath: browserPath,
+                version: getBrowserVersion(browserPath),
+                source: BrowserSource.PATH_ENVIRONMENT,
+                channel: ReleaseChannel.STABLE,
+            });
+        }
+    }
+
+    // 6. 从 Puppeteer 缓存查找
+    const puppeteerPaths = findChromeFromPuppeteer();
+    for (const browserPath of puppeteerPaths) {
+        if (!results.some(r => r.executablePath === browserPath)) {
+            results.push({
+                type: BrowserType.CHROMIUM,
+                executablePath: browserPath,
+                version: getBrowserVersion(browserPath),
+                source: BrowserSource.PUPPETEER_CACHE,
+                channel: ReleaseChannel.STABLE,
+            });
+        }
+    }
+
+    // 7. 从 Playwright 缓存查找
+    const playwrightPaths = findChromeFromPlaywright();
+    for (const browserPath of playwrightPaths) {
+        if (!results.some(r => r.executablePath === browserPath)) {
+            results.push({
+                type: BrowserType.CHROMIUM,
+                executablePath: browserPath,
+                version: getBrowserVersion(browserPath),
+                source: BrowserSource.PLAYWRIGHT_CACHE,
+                channel: ReleaseChannel.STABLE,
+            });
+        }
+    }
+
+    // 按版本号排序
+    results.sort((a, b) => compareVersions(a.version, b.version));
+    return results;
+}
+
+/**
+ * 查找默认浏览器（按优先级：Chrome > Edge > Brave > Chromium）
+ */
+export function findDefaultBrowser(): BrowserInfo | undefined {
+    const browsers = findInstalledBrowsers();
+
+    // 按优先级查找
+    const priorities = [BrowserType.CHROME, BrowserType.EDGE, BrowserType.BRAVE, BrowserType.CHROMIUM];
+
+    for (const type of priorities) {
+        const browser = browsers.find(b => b.type === type);
+        if (browser) {
+            return browser;
+        }
+    }
+
+    return browsers[0];
+}
+
 // ==================== 下载功能 ====================
 
 /**
- * 获取平台标识
+ * 获取平台标识（用于下载）
  */
-function getPlatform(): string {
-    const platform = os.platform();
-    const arch = os.arch();
+function getPlatformForDownload(): string {
+    const platform = getCurrentPlatform();
 
-    if (platform === 'linux') {
-        return 'linux64';
-    } else if (platform === 'darwin') {
-        return arch === 'arm64' ? 'mac-arm64' : 'mac-x64';
-    } else if (platform === 'win32') {
-        return arch === 'x64' ? 'win64' : 'win32';
+    switch (platform) {
+        case Platform.WIN64:
+            return 'win64';
+        case Platform.WIN32:
+            return 'win32';
+        case Platform.MAC:
+            return 'mac-x64';
+        case Platform.MAC_ARM:
+            return 'mac-arm64';
+        case Platform.LINUX:
+            return 'linux64';
+        case Platform.LINUX_ARM:
+            // Chrome for Testing 目前不支持 Linux ARM，回退到 linux64
+            pluginState.log('warn', 'Chrome for Testing 不支持 Linux ARM，尝试使用 linux64');
+            return 'linux64';
+        default:
+            return 'linux64';
     }
-
-    return 'linux64';
 }
 
 /**
  * 获取下载 URL
  */
 function getDownloadUrl(version: string, source: string): string {
-    const platform = getPlatform();
+    const platform = getPlatformForDownload();
     const baseUrl = DOWNLOAD_SOURCES[source as keyof typeof DOWNLOAD_SOURCES] || source;
     return `${baseUrl}/${version}/${platform}/chrome-${platform}.zip`;
 }
@@ -452,7 +1414,7 @@ export function getDefaultInstallPath(): string {
  */
 export function getChromeExecutablePath(installPath: string): string {
     const platform = os.platform();
-    const platformDir = getPlatform();
+    const platformDir = getPlatformForDownload();
 
     if (platform === 'win32') {
         return path.join(installPath, `chrome-${platformDir}`, 'chrome.exe');
