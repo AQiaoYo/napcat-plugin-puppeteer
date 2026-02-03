@@ -47,6 +47,9 @@ function sanitizeConfig(raw: unknown): PluginConfig {
         if (typeof b['executablePath'] === 'string') {
             browserConfig.executablePath = b['executablePath'];
         }
+        if (typeof b['browserWSEndpoint'] === 'string') {
+            browserConfig.browserWSEndpoint = b['browserWSEndpoint'];
+        }
         if (typeof b['headless'] === 'boolean') {
             browserConfig.headless = b['headless'];
         }
