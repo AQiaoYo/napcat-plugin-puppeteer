@@ -21,6 +21,13 @@ export const DEFAULT_BROWSER_CONFIG: BrowserConfig = {
         '--disable-background-networking',
         '--disable-sync',
         '--disable-translate',
+        '--disable-notifications',
+        '--disable-crash-reporter',
+        // Docker 环境优化参数
+        '--single-process',
+        '--disable-software-rasterizer',
+        '--disable-features=VizDisplayCompositor',
+        '--font-render-hinting=none',
     ],
     maxPages: 5,
     timeout: 30000,
