@@ -27,12 +27,123 @@ let currentPageCount = 0;
 /** 页面信号量（用于限制并发） */
 let pageQueue: Array<() => void> = [];
 
+/** 重连相关状态 */
+let isReconnecting = false;
+let reconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 5;
+const RECONNECT_DELAY_BASE = 1000; // 基础重连延迟 1 秒
+let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
 /** 统计信息 */
 const stats = {
     totalRenders: 0,
     failedRenders: 0,
     startTime: 0,
 };
+
+/**
+ * 清理重连状态
+ */
+function clearReconnectState(): void {
+    if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+        reconnectTimer = null;
+    }
+    isReconnecting = false;
+    reconnectAttempts = 0;
+}
+
+/**
+ * 尝试重连远程浏览器
+ */
+async function attemptReconnect(): Promise<boolean> {
+    const config = pluginState.config.browser;
+
+    // 只有远程模式才需要重连
+    if (!config.browserWSEndpoint) {
+        return false;
+    }
+
+    if (isReconnecting) {
+        pluginState.logDebug('已在重连中，跳过');
+        return false;
+    }
+
+    if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+        pluginState.log('error', `远程浏览器重连失败，已达到最大重试次数 (${MAX_RECONNECT_ATTEMPTS})`);
+        clearReconnectState();
+        return false;
+    }
+
+    isReconnecting = true;
+    reconnectAttempts++;
+
+    // 指数退避延迟
+    const delay = RECONNECT_DELAY_BASE * Math.pow(2, reconnectAttempts - 1);
+    pluginState.log('info', `将在 ${delay}ms 后尝试第 ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS} 次重连...`);
+
+    await new Promise(resolve => setTimeout(resolve, delay));
+
+    try {
+        pluginState.log('info', `正在重连远程浏览器: ${config.browserWSEndpoint}`);
+
+        browser = await puppeteer.connect({
+            browserWSEndpoint: config.browserWSEndpoint,
+            defaultViewport: {
+                width: config.defaultViewportWidth || 1280,
+                height: config.defaultViewportHeight || 800,
+                deviceScaleFactor: config.deviceScaleFactor || 2,
+            },
+        });
+
+        // 重新注册断开事件监听
+        setupDisconnectHandler();
+
+        stats.startTime = Date.now();
+        pluginState.log('info', '远程浏览器重连成功');
+        clearReconnectState();
+        return true;
+    } catch (error) {
+        pluginState.log('warn', `重连失败 (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}):`, error);
+        browser = null;
+        isReconnecting = false;
+
+        // 继续尝试重连
+        if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+            return attemptReconnect();
+        } else {
+            clearReconnectState();
+            return false;
+        }
+    }
+}
+
+/**
+ * 设置浏览器断开连接处理器
+ */
+function setupDisconnectHandler(): void {
+    if (!browser) return;
+
+    const config = pluginState.config.browser;
+    const isRemoteMode = !!config.browserWSEndpoint;
+
+    browser.on('disconnected', () => {
+        if (isRemoteMode) {
+            pluginState.log('warn', '远程浏览器连接已断开，准备自动重连...');
+        } else {
+            pluginState.log('warn', '浏览器已断开连接');
+        }
+
+        browser = null;
+        currentPageCount = 0;
+        pageQueue = [];
+
+        // 远程模式下自动重连
+        if (isRemoteMode && !isReconnecting) {
+            attemptReconnect();
+        }
+    });
+}
 
 /**
  * 查找可用的浏览器路径
@@ -112,13 +223,11 @@ export async function initBrowser(): Promise<boolean> {
                 },
             });
 
-            // 监听浏览器断开事件
-            browser.on('disconnected', () => {
-                pluginState.log('warn', '远程浏览器连接已断开');
-                browser = null;
-                currentPageCount = 0;
-                pageQueue = [];
-            });
+            // 监听浏览器断开事件（带自动重连）
+            setupDisconnectHandler();
+
+            // 重置重连计数
+            clearReconnectState();
 
             stats.startTime = Date.now();
             pluginState.log('info', '远程浏览器连接成功');
@@ -148,12 +257,7 @@ export async function initBrowser(): Promise<boolean> {
         });
 
         // 监听浏览器关闭事件
-        browser.on('disconnected', () => {
-            pluginState.log('warn', '浏览器已断开连接');
-            browser = null;
-            currentPageCount = 0;
-            pageQueue = [];
-        });
+        setupDisconnectHandler();
 
         stats.startTime = Date.now();
         pluginState.log('info', '浏览器启动成功');
@@ -172,6 +276,9 @@ export async function initBrowser(): Promise<boolean> {
  */
 export async function closeBrowser(): Promise<void> {
     pluginState.logDebug('closeBrowser() 被调用');
+
+    // 清理重连状态，防止关闭后自动重连
+    clearReconnectState();
 
     if (browser) {
         try {
