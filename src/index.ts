@@ -35,6 +35,7 @@ import {
     getChromeExecutablePath,
     installLinuxDependencies,
     detectLinuxDistro,
+    uninstallChrome,
     DEFAULT_CHROME_VERSION,
     getCurrentPlatform,
     findInstalledBrowsers,
@@ -153,6 +154,62 @@ const plugin_init = async (ctx: NapCatPluginContext) => {
                 } catch (e) {
                     res.status(500).json({ code: -1, message: String(e) });
                 }
+            });
+
+            // 卸载 Chrome
+            router.post('/chrome/uninstall', async (_req: any, res: any) => {
+                pluginState.logDebug('API 请求: POST /chrome/uninstall');
+                try {
+                    const result = await uninstallChrome();
+                    if (result.success) {
+                        res.json({ code: 0, message: 'Chrome 卸载成功' });
+                    } else {
+                        res.status(500).json({ code: -1, message: result.error || '卸载失败' });
+                    }
+                } catch (e) {
+                    res.status(500).json({ code: -1, message: String(e) });
+                }
+            });
+
+            // 重新安装/更新 Chrome
+            router.post('/chrome/install', async (_req: any, res: any) => {
+                pluginState.logDebug('API 请求: POST /chrome/install');
+                try {
+                    // 如果正在安装，返回错误
+                    if (isInstallingChrome()) {
+                        return res.status(409).json({ code: -1, message: '正在安装 Chrome，请稍后' });
+                    }
+
+                    // 启动后台安装
+                    installChrome({
+                        installDeps: true,
+                        onProgress: (progress) => {
+                            // 可选：通过 WebSocket 推送进度
+                            pluginState.logDebug(`Chrome 安装进度: ${progress.status} ${progress.progress}%`);
+                        }
+                    }).then((result) => {
+                        pluginState.log('info', result.success ? 'Chrome 安装/更新成功' : `Chrome 安装失败: ${result.error}`);
+                        // 安装成功后自动初始化浏览器
+                        if (result.success && pluginState.config.enabled) {
+                            initBrowser();
+                        }
+                    });
+
+                    res.json({ code: 0, message: 'Chrome 安装任务已启动' });
+                } catch (e) {
+                    res.status(500).json({ code: -1, message: String(e) });
+                }
+            });
+
+            // 获取安装进度
+            router.getNoAuth('/chrome/progress', (_req: any, res: any) => {
+                res.json({
+                    code: 0,
+                    data: {
+                        isInstalling: isInstallingChrome(),
+                        progress: getInstallProgress()
+                    }
+                });
             });
 
             // 截图接口 GET（无认证）- 简单 URL 截图

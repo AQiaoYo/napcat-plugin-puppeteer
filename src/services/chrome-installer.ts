@@ -1380,6 +1380,9 @@ let currentInstallProgress: InstallProgress = {
     message: '',
 };
 
+/** 当前阶段的最高进度（防止进度回退） */
+let maxProgressInCurrentStage: number = 0;
+
 /** 安装任务是否正在运行 */
 let isInstalling = false;
 
@@ -1462,11 +1465,39 @@ export async function installChrome(options: InstallOptions = {}): Promise<{
     }
 
     isInstalling = true;
+
+    // 重置进度状态
+    currentInstallProgress = {
+        status: 'idle',
+        progress: 0,
+        message: '',
+    };
+    maxProgressInCurrentStage = 0;
+
     const version = options.version || DEFAULT_CHROME_VERSION;
     const installPath = options.installPath || getDefaultInstallPath();
     const installDeps = options.installDeps !== false;
 
     const updateProgress = (progress: Partial<InstallProgress>) => {
+        // 如果状态发生变化，重置最高进度记录
+        if (progress.status && progress.status !== currentInstallProgress.status) {
+            maxProgressInCurrentStage = 0;
+        }
+
+        // 在下载阶段，防止进度回退（除非状态变化）
+        if (progress.progress !== undefined) {
+            if (progress.status === 'downloading' ||
+                (currentInstallProgress.status === 'downloading' && !progress.status)) {
+                // 只允许进度前进，不允许后退
+                if (progress.progress > maxProgressInCurrentStage) {
+                    maxProgressInCurrentStage = progress.progress;
+                } else {
+                    // 使用记录的最高进度，防止回退
+                    progress.progress = maxProgressInCurrentStage;
+                }
+            }
+        }
+
         currentInstallProgress = {
             ...currentInstallProgress,
             ...progress,
@@ -1513,9 +1544,9 @@ export async function installChrome(options: InstallOptions = {}): Promise<{
                 const url = getDownloadUrl(version, source);
                 pluginState.log('info', `尝试从 ${source} 下载: ${url}`);
 
+                // 只更新消息，不重置进度（让 updateProgress 内部逻辑处理进度防回退）
                 updateProgress({
                     status: 'downloading',
-                    progress: 20,
                     message: `正在从 ${source} 下载 Chrome...`,
                 });
 
@@ -1528,19 +1559,32 @@ export async function installChrome(options: InstallOptions = {}): Promise<{
                     lastUpdate = now;
 
                     const elapsed = (now - startTime) / 1000;
-                    const speed = downloaded / elapsed;
-                    const eta = total > 0 ? (total - downloaded) / speed : 0;
-                    const progress = total > 0 ? (downloaded / total) * 100 : 0;
+                    const speed = elapsed > 0 ? downloaded / elapsed : 0;
 
-                    updateProgress({
-                        status: 'downloading',
-                        progress: 20 + progress * 0.5, // 下载占 20%-70%
-                        message: `正在下载 Chrome... ${progress.toFixed(1)}%`,
-                        downloadedBytes: downloaded,
-                        totalBytes: total,
-                        speed: `${(speed / 1024 / 1024).toFixed(2)} MB/s`,
-                        eta: `${Math.ceil(eta)}s`,
-                    });
+                    // 如果服务器返回了文件大小，计算真实进度
+                    // 否则只更新下载速度和已下载大小，不更新进度百分比
+                    if (total > 0) {
+                        const progress = (downloaded / total) * 100;
+                        const eta = speed > 0 ? (total - downloaded) / speed : 0;
+
+                        updateProgress({
+                            status: 'downloading',
+                            progress: 20 + progress * 0.5, // 下载占 20%-70%
+                            message: `正在下载 Chrome... ${progress.toFixed(1)}%`,
+                            downloadedBytes: downloaded,
+                            totalBytes: total,
+                            speed: `${(speed / 1024 / 1024).toFixed(2)} MB/s`,
+                            eta: `${Math.ceil(eta)}s`,
+                        });
+                    } else {
+                        // 没有 content-length，只更新下载信息，不更新进度
+                        updateProgress({
+                            status: 'downloading',
+                            message: `正在下载 Chrome... ${(downloaded / 1024 / 1024).toFixed(1)} MB`,
+                            downloadedBytes: downloaded,
+                            speed: `${(speed / 1024 / 1024).toFixed(2)} MB/s`,
+                        });
+                    }
                 });
 
                 downloadSuccess = true;
@@ -1549,6 +1593,15 @@ export async function installChrome(options: InstallOptions = {}): Promise<{
             } catch (error) {
                 lastError = error instanceof Error ? error.message : String(error);
                 pluginState.log('warn', `从 ${source} 下载失败: ${lastError}`);
+
+                // 通知用户即将切换下载源
+                const nextSourceIndex = sources.indexOf(source) + 1;
+                if (nextSourceIndex < sources.length) {
+                    updateProgress({
+                        status: 'downloading',
+                        message: `${source} 下载失败，正在切换到 ${sources[nextSourceIndex]}...`,
+                    });
+                }
             }
         }
 
@@ -1612,6 +1665,7 @@ export async function installChrome(options: InstallOptions = {}): Promise<{
         };
     } finally {
         isInstalling = false;
+        maxProgressInCurrentStage = 0;
     }
 }
 
@@ -1644,5 +1698,30 @@ export async function getInstalledChromeInfo(installPath?: string): Promise<{
             installed: true,
             executablePath: execPath,
         };
+    }
+}
+
+/**
+ * 卸载 Chrome
+ */
+export async function uninstallChrome(installPath?: string): Promise<{ success: boolean; error?: string }> {
+    if (isInstalling) {
+        return { success: false, error: '安装任务正在进行中，无法卸载' };
+    }
+
+    const targetPath = installPath || getDefaultInstallPath();
+    if (!fs.existsSync(targetPath)) {
+        return { success: false, error: 'Chrome 安装目录不存在' };
+    }
+
+    try {
+        pluginState.log('info', `正在卸载 Chrome: ${targetPath}`);
+        fs.rmSync(targetPath, { recursive: true, force: true });
+        pluginState.log('info', 'Chrome 卸载完成');
+        return { success: true };
+    } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        pluginState.log('error', `卸载失败: ${message}`);
+        return { success: false, error: message };
     }
 }
