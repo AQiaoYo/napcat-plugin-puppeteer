@@ -21,24 +21,24 @@ const menuItems: { id: PageId; label: string; icon: React.ReactNode }[] = [
 
 export default function Sidebar({ currentPage, onPageChange }: SidebarProps) {
     return (
-        <aside className="w-64 flex-shrink-0 bg-white dark:bg-[#202124] border-r border-gray-200 dark:border-gray-800 flex flex-col z-10 transition-colors duration-300">
+        <aside className="w-64 flex-shrink-0 bg-white dark:bg-[#1a1b1d] border-r border-gray-200 dark:border-gray-800 flex flex-col z-10">
             {/* Logo */}
-            <div className="p-6 flex items-center gap-3">
-                <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg text-primary">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <div className="p-6 flex items-center gap-3 mb-2">
+                <div className="w-8 h-8 flex items-center justify-center bg-gray-900 dark:bg-white rounded-lg text-white dark:text-black">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                         <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
                         <polyline points="2 17 12 22 22 17"></polyline>
                         <polyline points="2 12 12 17 22 12"></polyline>
                     </svg>
                 </div>
                 <div>
-                    <h1 className="font-bold text-lg leading-tight">Puppeteer</h1>
-                    <p className="text-xs text-gray-400">渲染服务</p>
+                    <h1 className="font-bold text-base leading-tight tracking-tight text-gray-900 dark:text-white">Puppeteer</h1>
+                    <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">Service</p>
                 </div>
             </div>
 
             {/* Navigation */}
-            <nav className="flex-1 px-4 py-2 overflow-y-auto">
+            <nav className="flex-1 px-3 py-2 overflow-y-auto space-y-1">
                 {menuItems.map((item) => (
                     <div
                         key={item.id}
@@ -52,7 +52,7 @@ export default function Sidebar({ currentPage, onPageChange }: SidebarProps) {
             </nav>
 
             {/* Footer Links */}
-            <div className="px-4 pb-2">
+            <div className="px-3 pb-2">
                 <a
                     href="https://github.com/AQiaoYo/napcat-plugin-puppeteer/issues"
                     target="_blank"

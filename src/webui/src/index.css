@@ -16,36 +16,63 @@ body {
     height: 100%;
     margin: 0;
     overflow: hidden;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    @apply bg-[#f8f9fa] dark:bg-[#0c0c0e] text-gray-900 dark:text-gray-100;
 }
 
 #root {
     height: 100%;
 }
 
-/* Glass Card Effect */
+/* Clean Card Effect */
 .glass-card {
-    @apply bg-white/80 dark:bg-[#2a2b2e]/80 backdrop-blur-xl rounded-2xl border border-white/30 dark:border-white/5;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-    transition: all 0.3s var(--ease-smooth);
+    @apply bg-white dark:bg-[#1e1e20] rounded-xl border border-gray-100 dark:border-gray-800;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .dark .glass-card {
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+    box-shadow: none;
 }
 
 .glass-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    @apply border-gray-200 dark:border-gray-700;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    transform: translateY(-1px);
 }
 
 /* Sidebar Item */
 .sidebar-item {
-    @apply flex items-center gap-3 px-4 py-3 rounded-xl text-gray-500 dark:text-gray-400 cursor-pointer mb-1;
-    transition: all 0.2s var(--ease-smooth);
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 dark:text-gray-400 cursor-pointer mb-0.5 mx-2 text-sm font-medium;
+    transition: all 0.15s ease-in-out;
 }
 
 .sidebar-item:hover {
-    @apply bg-primary/10 text-primary;
+    @apply bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-200;
+}
+
+.sidebar-item.active {
+    @apply bg-primary/10 text-primary bg-opacity-10;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    @apply bg-gray-200 dark:bg-gray-700 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-300 dark:bg-gray-600;
 }
 
 .sidebar-item.active {
