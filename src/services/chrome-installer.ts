@@ -28,8 +28,83 @@ export const DOWNLOAD_SOURCES = {
     NPMMIRROR_REGISTRY: 'https://registry.npmmirror.com/-/binary/chrome-for-testing',
 } as const;
 
+/** 版本信息 JSON 地址 */
+export const VERSIONS_JSON_URLS = {
+    /** NPM 镜像源（国内推荐） */
+    NPMMIRROR: 'https://cdn.npmmirror.com/binaries/chrome-for-testing/known-good-versions-with-downloads.json',
+    /** 谷歌官方源 */
+    GOOGLE: 'https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json',
+} as const;
+
+// ==================== 版本信息类型定义 ====================
+
+/** 单个平台的下载信息 */
+interface ChromePlatformDownload {
+    platform: string;
+    url: string;
+}
+
+/** 单个版本的下载信息 */
+interface ChromeVersionDownloads {
+    chrome?: ChromePlatformDownload[];
+    chromedriver?: ChromePlatformDownload[];
+    'chrome-headless-shell'?: ChromePlatformDownload[];
+}
+
+/** 单个版本信息 */
+interface ChromeVersionInfo {
+    version: string;
+    revision: string;
+    downloads: ChromeVersionDownloads;
+}
+
+/** 完整的版本列表 JSON 结构 */
+interface KnownGoodVersionsWithDownloads {
+    timestamp: string;
+    versions: ChromeVersionInfo[];
+}
+
+// ==================== 版本信息缓存 ====================
+
+/** 版本信息缓存 */
+let versionsCache: KnownGoodVersionsWithDownloads | null = null;
+/** 缓存过期时间（1 小时） */
+const VERSIONS_CACHE_TTL = 60 * 60 * 1000;
+/** 缓存时间戳 */
+let versionsCacheTime = 0;
+
 /** 默认 Chrome 版本 */
 export const DEFAULT_CHROME_VERSION = '131.0.6778.204';
+
+/**
+ * 获取推荐的 Chrome 版本（考虑系统兼容性）
+ * 在不支持 Chrome for Testing 的旧版 Windows 上返回提示信息
+ * 注意：旧版 Windows 无法自动安装，需要用户手动安装 Chrome
+ */
+export function getRecommendedChromeVersion(): {
+    version: string;
+    isLegacy: boolean;
+    canAutoInstall: boolean;
+    reason?: string
+} {
+    if (os.platform() === 'win32') {
+        const winInfo = getWindowsVersion();
+        if (winInfo && !winInfo.supportsChromeForTesting) {
+            return {
+                version: LAST_LEGACY_WINDOWS_CHROME_VERSION,
+                isLegacy: true,
+                canAutoInstall: false, // 无法自动安装，需要手动
+                reason: `${winInfo.name} 不支持 Chrome for Testing（需要 Windows 10+）。` +
+                    `请手动安装 Chrome 浏览器并在配置中指定路径。`,
+            };
+        }
+    }
+    return {
+        version: DEFAULT_CHROME_VERSION,
+        isLegacy: false,
+        canAutoInstall: true,
+    };
+}
 
 /** 安装状态 */
 export type InstallStatus = 'idle' | 'downloading' | 'extracting' | 'installing-deps' | 'completed' | 'failed';
@@ -115,6 +190,130 @@ export interface BrowserInfo {
 }
 
 // ==================== 平台检测 ====================
+
+/** Windows 版本信息 */
+export interface WindowsVersionInfo {
+    major: number;
+    minor: number;
+    build: number;
+    isServer: boolean;
+    name: string;
+    supportsChromeForTesting: boolean;
+}
+
+/** Chrome for Testing 最低支持的 Windows 版本 (Windows 10 = 10.0) */
+const MIN_WINDOWS_VERSION_MAJOR = 10;
+const MIN_WINDOWS_VERSION_MINOR = 0;
+
+/** Chrome for Testing 最早可用版本（113 开始才有 Chrome for Testing） */
+export const MIN_CHROME_FOR_TESTING_VERSION = '113.0.5672.0';
+
+/** 
+ * 最后一个支持 Windows 7/8/8.1/Server 2012 的 Chrome 版本
+ * 注意：这不是 Chrome for Testing，需要从官网手动下载安装
+ * Chrome for Testing 从 113 版本才开始有，而 113+ 不支持 Windows Server 2012
+ */
+export const LAST_LEGACY_WINDOWS_CHROME_VERSION = '109.0.5414.120';
+
+/**
+ * 获取 Windows 版本信息
+ * 仅在 Windows 平台有效
+ */
+export function getWindowsVersion(): WindowsVersionInfo | null {
+    if (os.platform() !== 'win32') {
+        return null;
+    }
+
+    try {
+        const release = os.release(); // 格式如 "10.0.19041" 或 "6.2.9200"
+
+        const parts = release.split('.');
+        const major = parseInt(parts[0], 10) || 0;
+        const minor = parseInt(parts[1], 10) || 0;
+        const build = parseInt(parts[2], 10) || 0;
+
+        // 检测是否为服务器版本（通过注册表）
+        let isServer = false;
+        let productName = '';
+
+        try {
+            const result = execSync(
+                'reg query "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion" /v ProductName',
+                { encoding: 'utf8', timeout: 5000, windowsHide: true }
+            );
+            productName = result.match(/ProductName\s+REG_SZ\s+(.+)/)?.[1]?.trim() || '';
+            isServer = productName.toLowerCase().includes('server');
+        } catch {
+            // 无法读取注册表，尝试通过 wmic 获取
+            try {
+                const wmicResult = execSync('wmic os get Caption /value', { encoding: 'utf8', timeout: 5000, windowsHide: true });
+                const captionMatch = wmicResult.match(/Caption=(.+)/);
+                if (captionMatch) {
+                    productName = captionMatch[1].trim();
+                    isServer = productName.toLowerCase().includes('server');
+                }
+            } catch {
+                // WMIC 也失败，继续使用默认值
+            }
+        }
+
+        // 确定版本名称
+        let name = productName || 'Unknown Windows';
+        if (!productName) {
+            if (major === 10 && build >= 22000) {
+                name = 'Windows 11';
+            } else if (major === 10) {
+                name = 'Windows 10';
+            } else if (major === 6 && minor === 3) {
+                name = isServer ? 'Windows Server 2012 R2' : 'Windows 8.1';
+            } else if (major === 6 && minor === 2) {
+                name = isServer ? 'Windows Server 2012' : 'Windows 8';
+            } else if (major === 6 && minor === 1) {
+                name = isServer ? 'Windows Server 2008 R2' : 'Windows 7';
+            } else if (major === 6 && minor === 0) {
+                name = isServer ? 'Windows Server 2008' : 'Windows Vista';
+            } else {
+                name = `Windows ${major}.${minor}`;
+            }
+        }
+
+        // Chrome for Testing 需要 Windows 10+ (major >= 10)
+        const supportsChromeForTesting = major >= MIN_WINDOWS_VERSION_MAJOR;
+
+        pluginState.log('info', `Windows 版本检测结果: ${name}, supportsChromeForTesting: ${supportsChromeForTesting}`);
+
+        return {
+            major,
+            minor,
+            build,
+            isServer,
+            name,
+            supportsChromeForTesting,
+        };
+    } catch (error) {
+        pluginState.log('warn', `获取 Windows 版本信息失败: ${error instanceof Error ? error.message : String(error)}`);
+        // 返回一个保守的默认值，而不是 null，这样至少能让用户看到提示
+        return {
+            major: 0,
+            minor: 0,
+            build: 0,
+            isServer: false,
+            name: 'Unknown Windows',
+            supportsChromeForTesting: false, // 保守起见，假设不支持
+        };
+    }
+}
+
+/**
+ * 检查当前 Windows 版本是否支持 Chrome for Testing
+ */
+export function isWindowsVersionSupported(): boolean {
+    const winInfo = getWindowsVersion();
+    if (!winInfo) {
+        return true; // 非 Windows 系统，返回 true
+    }
+    return winInfo.supportsChromeForTesting;
+}
 
 /**
  * 获取当前平台
@@ -1236,12 +1435,257 @@ function getPlatformForDownload(): string {
 }
 
 /**
- * 获取下载 URL
+ * 发送 HTTP/HTTPS 请求获取 JSON 数据
  */
-function getDownloadUrl(version: string, source: string): string {
+async function fetchJson<T>(url: string): Promise<T> {
+    return new Promise((resolve, reject) => {
+        const isHttps = url.startsWith('https:');
+        const requester = isHttps ? https : http;
+
+        const makeRequest = (requestUrl: string, redirectCount = 0) => {
+            if (redirectCount > 5) {
+                reject(new Error('重定向次数过多'));
+                return;
+            }
+
+            const urlObj = new URL(requestUrl);
+            const options: https.RequestOptions = {
+                hostname: urlObj.hostname,
+                port: urlObj.port || (urlObj.protocol === 'https:' ? 443 : 80),
+                path: urlObj.pathname + urlObj.search,
+                method: 'GET',
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                    'Accept': 'application/json',
+                },
+                timeout: 30000,
+            };
+
+            const req = (requestUrl.startsWith('https:') ? https : http).request(options, (res) => {
+                // 处理重定向
+                if (res.statusCode && [301, 302, 307, 308].includes(res.statusCode)) {
+                    const redirectUrl = res.headers.location;
+                    if (redirectUrl) {
+                        const finalUrl = redirectUrl.startsWith('http')
+                            ? redirectUrl
+                            : new URL(redirectUrl, requestUrl).toString();
+                        makeRequest(finalUrl, redirectCount + 1);
+                        return;
+                    }
+                }
+
+                if (res.statusCode && res.statusCode >= 400) {
+                    reject(new Error(`HTTP 错误: ${res.statusCode}`));
+                    return;
+                }
+
+                let data = '';
+                res.on('data', (chunk) => {
+                    data += chunk;
+                });
+
+                res.on('end', () => {
+                    try {
+                        const json = JSON.parse(data);
+                        resolve(json);
+                    } catch (error) {
+                        reject(new Error('JSON 解析失败'));
+                    }
+                });
+            });
+
+            req.on('error', (err) => {
+                reject(err);
+            });
+
+            req.on('timeout', () => {
+                req.destroy();
+                reject(new Error('请求超时'));
+            });
+
+            req.end();
+        };
+
+        makeRequest(url);
+    });
+}
+
+/**
+ * 获取 Chrome 版本信息列表
+ * 会优先使用缓存，缓存过期后重新获取
+ */
+async function fetchVersionsInfo(): Promise<KnownGoodVersionsWithDownloads | null> {
+    // 检查缓存是否有效
+    const now = Date.now();
+    if (versionsCache && (now - versionsCacheTime) < VERSIONS_CACHE_TTL) {
+        return versionsCache;
+    }
+
+    // 尝试从多个源获取
+    const sources = [VERSIONS_JSON_URLS.NPMMIRROR, VERSIONS_JSON_URLS.GOOGLE];
+
+    for (const url of sources) {
+        try {
+            pluginState.log('info', `正在从 ${url} 获取版本信息...`);
+            const data = await fetchJson<KnownGoodVersionsWithDownloads>(url);
+            if (data && data.versions && data.versions.length > 0) {
+                versionsCache = data;
+                versionsCacheTime = now;
+                pluginState.log('info', `成功获取版本信息，共 ${data.versions.length} 个版本`);
+                return data;
+            }
+        } catch (error) {
+            pluginState.log('warn', `从 ${url} 获取版本信息失败: ${error instanceof Error ? error.message : String(error)}`);
+        }
+    }
+
+    return null;
+}
+
+/**
+ * 从版本信息中查找指定版本的下载 URL
+ */
+function findDownloadUrlFromVersionInfo(
+    versionsInfo: KnownGoodVersionsWithDownloads,
+    version: string,
+    platform: string
+): string | null {
+    const versionInfo = versionsInfo.versions.find(v => v.version === version);
+    if (!versionInfo) {
+        return null;
+    }
+
+    const chromeDownloads = versionInfo.downloads.chrome;
+    if (!chromeDownloads) {
+        return null;
+    }
+
+    const platformDownload = chromeDownloads.find(d => d.platform === platform);
+    if (!platformDownload) {
+        return null;
+    }
+
+    return platformDownload.url;
+}
+
+/**
+ * 将 Google 官方 URL 替换为镜像源 URL
+ */
+function replaceUrlWithMirror(url: string, source: string): string {
+    const baseUrl = DOWNLOAD_SOURCES[source as keyof typeof DOWNLOAD_SOURCES];
+    if (!baseUrl) {
+        return url; // 未知源，保持原样
+    }
+
+    // 如果是 Google 源或者 URL 不需要替换
+    if (source === 'GOOGLE') {
+        return url;
+    }
+
+    // 替换 Google 官方域名为镜像域名
+    // 原始格式: https://storage.googleapis.com/chrome-for-testing-public/VERSION/PLATFORM/chrome-PLATFORM.zip
+    // 镜像格式: https://cdn.npmmirror.com/binaries/chrome-for-testing/VERSION/PLATFORM/chrome-PLATFORM.zip
+    const googlePrefix = DOWNLOAD_SOURCES.GOOGLE;
+    if (url.startsWith(googlePrefix)) {
+        return url.replace(googlePrefix, baseUrl);
+    }
+
+    return url;
+}
+
+/**
+ * 获取官方下载 URL（用于镜像站失败时的兜底）
+ * 从版本信息 JSON 中查找精确的官方下载 URL
+ */
+async function getOfficialDownloadUrl(version: string): Promise<string | null> {
+    const platform = getPlatformForDownload();
+
+    try {
+        const versionsInfo = await fetchVersionsInfo();
+        if (versionsInfo) {
+            const originalUrl = findDownloadUrlFromVersionInfo(versionsInfo, version, platform);
+            if (originalUrl) {
+                pluginState.log('info', `从版本信息中找到官方下载 URL: ${originalUrl}`);
+                return originalUrl;
+            }
+            pluginState.log('warn', `版本 ${version} 未在版本信息 JSON 中找到`);
+        }
+    } catch (error) {
+        pluginState.log('warn', `获取版本信息失败: ${error instanceof Error ? error.message : String(error)}`);
+    }
+
+    return null;
+}
+
+/**
+ * 获取下载 URL
+ * 优先从版本信息 JSON 中查找精确 URL，失败时回退到构造 URL
+ * @deprecated 推荐直接使用 getDownloadUrlFallback 构造镜像 URL，官方 URL 通过 getOfficialDownloadUrl 获取
+ */
+async function getDownloadUrlAsync(version: string, source: string): Promise<string> {
+    const platform = getPlatformForDownload();
+
+    // 尝试从版本信息中获取精确的下载 URL
+    try {
+        const versionsInfo = await fetchVersionsInfo();
+        if (versionsInfo) {
+            const originalUrl = findDownloadUrlFromVersionInfo(versionsInfo, version, platform);
+            if (originalUrl) {
+                const mirroredUrl = replaceUrlWithMirror(originalUrl, source);
+                pluginState.log('info', `从版本信息中找到下载 URL: ${mirroredUrl}`);
+                return mirroredUrl;
+            }
+            pluginState.log('warn', `版本 ${version} 未在版本信息中找到，将使用构造的 URL`);
+        }
+    } catch (error) {
+        pluginState.log('warn', `获取版本信息失败: ${error instanceof Error ? error.message : String(error)}`);
+    }
+
+    // 回退：直接构造 URL
+    return getDownloadUrlFallback(version, source);
+}
+
+/**
+ * 获取下载 URL（同步回退方法）
+ */
+function getDownloadUrlFallback(version: string, source: string): string {
     const platform = getPlatformForDownload();
     const baseUrl = DOWNLOAD_SOURCES[source as keyof typeof DOWNLOAD_SOURCES] || source;
     return `${baseUrl}/${version}/${platform}/chrome-${platform}.zip`;
+}
+
+/**
+ * 获取下载 URL（同步版本，用于兼容）
+ * @deprecated 推荐使用 getDownloadUrlAsync
+ */
+function getDownloadUrl(version: string, source: string): string {
+    return getDownloadUrlFallback(version, source);
+}
+
+/**
+ * 获取所有可用的 Chrome 版本列表
+ */
+export async function getAvailableChromeVersions(): Promise<string[]> {
+    const versionsInfo = await fetchVersionsInfo();
+    if (!versionsInfo) {
+        return [];
+    }
+
+    return versionsInfo.versions.map(v => v.version);
+}
+
+/**
+ * 检查指定版本是否可用
+ */
+export async function isVersionAvailable(version: string): Promise<boolean> {
+    const versionsInfo = await fetchVersionsInfo();
+    if (!versionsInfo) {
+        return false;
+    }
+
+    const platform = getPlatformForDownload();
+    const url = findDownloadUrlFromVersionInfo(versionsInfo, version, platform);
+    return url !== null;
 }
 
 /**
@@ -1511,6 +1955,42 @@ export async function installChrome(options: InstallOptions = {}): Promise<{
         pluginState.log('info', `开始安装 Chrome ${version}`);
         pluginState.log('info', `安装路径: ${installPath}`);
 
+        // 0. 检查 Windows 版本兼容性
+        if (os.platform() === 'win32') {
+            const winInfo = getWindowsVersion();
+            if (winInfo) {
+                pluginState.log('info', `检测到 Windows 版本: ${winInfo.name} (${winInfo.major}.${winInfo.minor}.${winInfo.build})`);
+
+                if (!winInfo.supportsChromeForTesting) {
+                    // Windows 版本过低，无法使用 Chrome for Testing
+                    const errorMsg = `当前系统 ${winInfo.name} 不支持 Chrome for Testing。\n` +
+                        `Chrome for Testing 从 113 版本才开始提供，且需要 Windows 10 或更高版本。\n` +
+                        `\n【解决方案】手动安装 Chrome 浏览器，然后在配置中指定 executablePath\n` +
+                        `\nChrome ${LAST_LEGACY_WINDOWS_CHROME_VERSION} 下载链接（支持此系统的最后版本）：\n` +
+                        `  32 位: https://dl.google.com/release2/chrome/acihtkcueyye3ymoj2afvv7ulzxa_109.0.5414.120/109.0.5414.120_chrome_installer.exe\n` +
+                        `  64 位: https://dl.google.com/release2/chrome/czao2hrvpk5wgqrkz4kks5r734_109.0.5414.120/109.0.5414.120_chrome_installer.exe\n` +
+                        `\n⚠️ 注意：以上为 Google 官方链接，国内网络可能无法直接访问，请自行寻找其他下载途径。\n` +
+                        `\n安装完成后，在插件配置中设置 executablePath 指向 Chrome 可执行文件路径，例如：\n` +
+                        `  C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe`;
+
+                    pluginState.log('error', errorMsg);
+
+                    updateProgress({
+                        status: 'failed',
+                        progress: 0,
+                        message: `系统版本不支持: ${winInfo.name}`,
+                        error: errorMsg,
+                    });
+
+                    isInstalling = false;
+                    return {
+                        success: false,
+                        error: errorMsg,
+                    };
+                }
+            }
+        }
+
         // 1. 安装系统依赖（仅 Linux）
         if (installDeps && os.platform() === 'linux') {
             updateProgress({
@@ -1604,6 +2084,69 @@ export async function installChrome(options: InstallOptions = {}): Promise<{
                         message: `${source} 下载失败，正在切换到 ${sources[nextSourceIndex]}...`,
                     });
                 }
+            }
+        }
+
+        // 如果所有镜像源都失败，尝试从版本信息 JSON 获取官方 URL 作为兜底
+        if (!downloadSuccess) {
+            pluginState.log('info', '所有镜像源都失败，尝试从版本信息获取官方下载 URL...');
+            updateProgress({
+                status: 'downloading',
+                message: '镜像下载失败，正在尝试官方源...',
+            });
+
+            try {
+                const officialUrl = await getOfficialDownloadUrl(version);
+                if (officialUrl) {
+                    pluginState.log('info', `尝试从官方源下载: ${officialUrl}`);
+                    updateProgress({
+                        status: 'downloading',
+                        message: '正在从官方源下载 Chrome...',
+                    });
+
+                    const startTime = Date.now();
+                    let lastUpdate = startTime;
+
+                    await downloadFile(officialUrl, zipPath, (downloaded, total) => {
+                        const now = Date.now();
+                        if (now - lastUpdate < 500) return;
+                        lastUpdate = now;
+
+                        const elapsed = (now - startTime) / 1000;
+                        const speed = elapsed > 0 ? downloaded / elapsed : 0;
+
+                        if (total > 0) {
+                            const progress = (downloaded / total) * 100;
+                            const eta = speed > 0 ? (total - downloaded) / speed : 0;
+
+                            updateProgress({
+                                status: 'downloading',
+                                progress: 20 + progress * 0.5,
+                                message: `正在从官方源下载 Chrome... ${progress.toFixed(1)}%`,
+                                downloadedBytes: downloaded,
+                                totalBytes: total,
+                                speed: `${(speed / 1024 / 1024).toFixed(2)} MB/s`,
+                                eta: `${Math.ceil(eta)}s`,
+                            });
+                        } else {
+                            updateProgress({
+                                status: 'downloading',
+                                message: `正在从官方源下载 Chrome... ${(downloaded / 1024 / 1024).toFixed(1)} MB`,
+                                downloadedBytes: downloaded,
+                                speed: `${(speed / 1024 / 1024).toFixed(2)} MB/s`,
+                            });
+                        }
+                    });
+
+                    downloadSuccess = true;
+                    pluginState.log('info', '从官方源下载成功');
+                } else {
+                    pluginState.log('warn', `版本 ${version} 在官方版本列表中未找到`);
+                }
+            } catch (error) {
+                const officialError = error instanceof Error ? error.message : String(error);
+                pluginState.log('warn', `从官方源下载失败: ${officialError}`);
+                lastError = `镜像源和官方源均失败。最后错误: ${officialError}`;
             }
         }
 

@@ -5,11 +5,16 @@
 
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import puppeteer from 'puppeteer-core';
 import type { Browser, Page } from 'puppeteer-core';
 import { pluginState } from '../core/state';
 import { getDefaultBrowserPaths, DEFAULT_BROWSER_CONFIG } from '../config';
-import { getDefaultInstallPath, getChromeExecutablePath } from './chrome-installer';
+import {
+    getDefaultInstallPath,
+    getChromeExecutablePath,
+    getWindowsVersion,
+} from './chrome-installer';
 import type {
     ScreenshotOptions,
     RenderResult,
@@ -275,6 +280,19 @@ export async function initBrowser(): Promise<boolean> {
         const executablePath = findBrowserPath(config.executablePath);
 
         if (!executablePath) {
+            // 检查是否是 Windows 版本兼容性问题
+            if (os.platform() === 'win32') {
+                const winInfo = getWindowsVersion();
+                if (winInfo && !winInfo.supportsChromeForTesting) {
+                    pluginState.log('error',
+                        `当前系统 ${winInfo.name} 不支持本插件。\n` +
+                        `Puppeteer 要求 Windows 10 或更高版本。\n` +
+                        `解决方案：升级系统或使用远程浏览器连接。`
+                    );
+                    return false;
+                }
+            }
+
             pluginState.log('error', '未找到可用的浏览器，请在配置中指定浏览器路径或远程浏览器地址(browserWSEndpoint)');
             return false;
         }

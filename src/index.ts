@@ -40,6 +40,8 @@ import {
     getCurrentPlatform,
     findInstalledBrowsers,
     Platform,
+    getWindowsVersion,
+    LAST_LEGACY_WINDOWS_CHROME_VERSION,
 } from './services/chrome-installer';
 import type { ScreenshotOptions } from './types';
 
@@ -454,6 +456,22 @@ const plugin_init = async (ctx: NapCatPluginContext) => {
                         }
                     }
 
+                    // 检查 Windows 版本兼容性
+                    let windowsVersionName = '';
+                    if (canInstall && (platform === Platform.WIN32 || platform === Platform.WIN64)) {
+                        const winInfo = getWindowsVersion();
+                        if (winInfo) {
+                            windowsVersionName = winInfo.name;
+                            if (!winInfo.supportsChromeForTesting) {
+                                canInstall = false;
+                                cannotInstallReason = `当前系统 ${winInfo.name} 不支持本插件（Puppeteer 要求 Windows 10 或更高版本）。\n\n` +
+                                    `解决方案：\n` +
+                                    `1. 升级操作系统至 Windows 10 / Windows Server 2016 或更高版本\n` +
+                                    `2. 使用远程浏览器连接（推荐 Docker 部署，见下方说明）`;
+                            }
+                        }
+                    }
+
                     res.json({
                         code: 0,
                         data: {
@@ -466,6 +484,7 @@ const plugin_init = async (ctx: NapCatPluginContext) => {
                             platform: process.platform,
                             arch: process.arch,
                             linuxDistro: distro,
+                            windowsVersion: windowsVersionName || undefined,
                             defaultVersion: DEFAULT_CHROME_VERSION,
                             canInstall,
                             cannotInstallReason: cannotInstallReason || undefined,
