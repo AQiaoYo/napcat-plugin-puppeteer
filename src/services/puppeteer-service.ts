@@ -8,7 +8,7 @@ import path from 'path';
 import puppeteer from 'puppeteer-core';
 import type { Browser, Page } from 'puppeteer-core';
 import { pluginState } from '../core/state';
-import { getDefaultBrowserPaths } from '../config';
+import { getDefaultBrowserPaths, DEFAULT_BROWSER_CONFIG } from '../config';
 import { getDefaultInstallPath, getChromeExecutablePath } from './chrome-installer';
 import type {
     ScreenshotOptions,
@@ -45,6 +45,18 @@ const stats = {
     failedRenders: 0,
     startTime: 0,
 };
+
+/**
+ * 获取默认视口配置
+ * 统一管理视口默认值，避免魔法数字
+ */
+function getDefaultViewport(config: BrowserConfig, overrides?: { width?: number; height?: number; deviceScaleFactor?: number }) {
+    return {
+        width: overrides?.width ?? config.defaultViewportWidth ?? DEFAULT_BROWSER_CONFIG.defaultViewportWidth!,
+        height: overrides?.height ?? config.defaultViewportHeight ?? DEFAULT_BROWSER_CONFIG.defaultViewportHeight!,
+        deviceScaleFactor: overrides?.deviceScaleFactor ?? config.deviceScaleFactor ?? DEFAULT_BROWSER_CONFIG.deviceScaleFactor!,
+    };
+}
 
 /**
  * 清理重连状态
@@ -94,11 +106,7 @@ async function attemptReconnect(): Promise<boolean> {
 
         browser = await puppeteer.connect({
             browserWSEndpoint: config.browserWSEndpoint,
-            defaultViewport: {
-                width: config.defaultViewportWidth || 1280,
-                height: config.defaultViewportHeight || 800,
-                deviceScaleFactor: config.deviceScaleFactor || 2,
-            },
+            defaultViewport: getDefaultViewport(config),
         });
 
         // 重新注册断开事件监听
@@ -200,29 +208,22 @@ function findBrowserPath(configPath?: string, suppressLog = false): string | und
 
 /**
  * 获取浏览器启动参数
+ * 优先使用用户配置的参数，否则使用默认配置并追加窗口大小参数
  */
 function getBrowserArgs(config: BrowserConfig): string[] {
-    const defaultArgs = [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--no-zygote',
-        '--disable-extensions',
-        '--disable-background-networking',
-        '--disable-sync',
-        '--disable-translate',
-        '--disable-notifications',
-        '--disable-crash-reporter',
-        // Docker 环境优化参数
-        '--single-process', // 某些受限环境需要
-        '--disable-software-rasterizer',
-        '--disable-features=VizDisplayCompositor',
-        '--font-render-hinting=none', // 字体渲染优化
-        `--window-size=${config.defaultViewportWidth || 1280},${config.defaultViewportHeight || 800}`,
-    ];
+    // 如果用户配置了自定义参数，直接使用
+    if (config.args?.length) {
+        return config.args;
+    }
 
-    return config.args?.length ? config.args : defaultArgs;
+    // 使用默认参数并追加动态的窗口大小参数
+    const width = config.defaultViewportWidth ?? DEFAULT_BROWSER_CONFIG.defaultViewportWidth;
+    const height = config.defaultViewportHeight ?? DEFAULT_BROWSER_CONFIG.defaultViewportHeight;
+
+    return [
+        ...(DEFAULT_BROWSER_CONFIG.args || []),
+        `--window-size=${width},${height}`,
+    ];
 }
 
 /**
@@ -246,11 +247,7 @@ export async function initBrowser(): Promise<boolean> {
 
             browser = await puppeteer.connect({
                 browserWSEndpoint: config.browserWSEndpoint,
-                defaultViewport: {
-                    width: config.defaultViewportWidth || 1280,
-                    height: config.defaultViewportHeight || 800,
-                    deviceScaleFactor: config.deviceScaleFactor || 2,
-                },
+                defaultViewport: getDefaultViewport(config),
             });
 
             // 监听浏览器断开事件（带自动重连）
@@ -288,11 +285,7 @@ export async function initBrowser(): Promise<boolean> {
             executablePath,
             headless: config.headless !== false,
             args: getBrowserArgs(config),
-            defaultViewport: {
-                width: config.defaultViewportWidth || 1280,
-                height: config.defaultViewportHeight || 800,
-                deviceScaleFactor: config.deviceScaleFactor || 2,
-            },
+            defaultViewport: getDefaultViewport(config),
         });
 
         // 监听浏览器关闭事件
@@ -531,11 +524,7 @@ export async function screenshot<
 
         // 设置视口
         if (options.setViewport) {
-            const viewport = {
-                width: options.setViewport.width || config.defaultViewportWidth || 1280,
-                height: options.setViewport.height || config.defaultViewportHeight || 800,
-                deviceScaleFactor: options.setViewport.deviceScaleFactor || config.deviceScaleFactor || 2,
-            };
+            const viewport = getDefaultViewport(config, options.setViewport);
             pluginState.logDebug('设置视口:', viewport);
             await page.setViewport(viewport);
         }
@@ -642,11 +631,11 @@ export async function screenshot<
 
         // 更新视口以适应元素
         if (box) {
-            await page.setViewport({
-                width: Math.ceil(box.width) || config.defaultViewportWidth || 1280,
-                height: Math.ceil(box.height) || config.defaultViewportHeight || 800,
-                deviceScaleFactor: options.setViewport?.deviceScaleFactor || config.deviceScaleFactor || 2,
-            });
+            await page.setViewport(getDefaultViewport(config, {
+                width: Math.ceil(box.width) || undefined,
+                height: Math.ceil(box.height) || undefined,
+                deviceScaleFactor: options.setViewport?.deviceScaleFactor,
+            }));
         }
 
         // 分页截图
