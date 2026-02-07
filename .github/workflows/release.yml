@@ -13,14 +13,17 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -45,7 +48,6 @@ jobs:
           else
             VERSION="v$(date +'%Y%m%d%H%M%S')"
           fi
-          # 去掉前面的 'v' 字符用于 package.json
           CLEAN_VERSION=$(echo $VERSION | sed 's/^v//')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "clean_version=$CLEAN_VERSION" >> $GITHUB_OUTPUT
@@ -58,100 +60,176 @@ jobs:
         run: pnpm run build
 
       - name: Prepare release package
+        env:
+          PLUGIN_NAME: napcat-plugin-puppeteer
         run: |
           # 创建临时目录用于组织文件
           mkdir -p release
-          
+
           # 复制需要的文件到临时目录
-          # copy 脚本已经将 webui 和处理过的 package.json 放入 dist
           cp dist/index.mjs release/
           cp dist/package.json release/
           cp -r dist/webui release/
-          
+
           # 进入临时目录并压缩
           cd release
-          zip -r ../napcat-plugin-puppeteer.zip index.mjs package.json webui
-          
+          zip -r ../${PLUGIN_NAME}.zip index.mjs package.json webui
+
       - name: Verify zip contents
         run: |
-          unzip -l napcat-plugin-puppeteer.zip
+          PLUGIN_NAME="napcat-plugin-puppeteer"
+          unzip -l ${PLUGIN_NAME}.zip
 
-      - name: Create Release Note via AI
-        env:
-          OPENAI_KEY: ${{ secrets.OPENAI_KEY }}
-          OPENROUTER_API_URL: "https://91vip.futureppo.top/v1/chat/completions"
-          OPENROUTER_MODEL: "copilot/gemini-3-flash-preview"
-          GITHUB_OWNER: "AQiaoYo"
-          GITHUB_REPO: "napcat-plugin-puppeteer"
+      - name: Collect git log
+        id: gitlog
         run: |
-          set -euo pipefail
           CURRENT_TAG="${{ steps.version.outputs.version }}"
-          
-          # 获取 tag 列表并找到上一个 tag
+
+          # 获取上一个 tag
           git fetch --tags --force
-          TAGS=( $(git tag -l "v*" --sort=version:refname) )
-          PREV_TAG=""
-          for i in "${!TAGS[@]}"; do
-            if [ "${TAGS[$i]}" = "$CURRENT_TAG" ]; then
-              if [ $i -gt 0 ]; then
-                PREV_TAG="${TAGS[$((i-1))]}"
-              fi
-              break
-            fi
-          done
+          PREV_TAG=$(git tag -l "v*" --sort=version:refname | grep -v "$CURRENT_TAG" | tail -1)
 
           if [ -z "$PREV_TAG" ]; then
             PREV_TAG=$(git rev-list --max-parents=0 HEAD | head -1)
           fi
+
+          echo "Current tag: $CURRENT_TAG"
           echo "Previous tag: $PREV_TAG"
 
-          # 获取提交记录和差异
-          COMMITS=$(git log --pretty=format:'- %s (%h)' "$PREV_TAG".."$CURRENT_TAG" 2>/dev/null || git log --pretty=format:'- %s (%h)' -10)
-          SUMMARY_LINE=$(git diff --stat "$PREV_TAG".."$CURRENT_TAG" | tail -1 || echo "No changes")
-          FILE_CHANGES=$(git diff --stat "$PREV_TAG".."$CURRENT_TAG" | head -n -1 | head -30 || echo "")
-          CODE_DIFF=$(git diff "$PREV_TAG".."$CURRENT_TAG" -- 'src/*.ts' | head -c 5000 || echo "Diff too large or no code changes")
+          COMMITS=$(git log --pretty=format:'- %s (%h)' "$PREV_TAG"..HEAD 2>/dev/null || git log --pretty=format:'- %s (%h)' -10)
 
-          # 构建请求
-          SYSTEM_PROMPT=$(cat .github/prompt/release_note_prompt.txt)
+          # 写入文件供后续步骤使用
+          echo "$COMMITS" > commits.txt
+
+          echo "current_tag=$CURRENT_TAG" >> $GITHUB_OUTPUT
+          echo "prev_tag=$PREV_TAG" >> $GITHUB_OUTPUT
+
+      # （可选）AI 生成 Release Note
+      # 如需启用，请在仓库 Settings > Secrets and variables > Actions > Repository secrets 中配置：
+      #   AI_API_URL: 兼容 OpenAI 格式的 API 地址（如 https://api.openai.com/v1/chat/completions）
+      #   AI_API_KEY: 对应的 API 密钥
+      #   AI_MODEL:  （可选）模型名称，默认 gpt-4o-mini
+      - name: Check AI config
+        id: ai_check
+        run: |
+          if [ -n "$AI_API_KEY" ] && [ -n "$AI_API_URL" ]; then
+            echo "available=true" >> $GITHUB_OUTPUT
+            echo "✅ 检测到 AI 配置，将使用 AI 生成 Release Note"
+          else
+            echo "available=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ 未配置 AI_API_KEY / AI_API_URL，将使用默认 Release Note"
+          fi
+        env:
+          AI_API_KEY: ${{ secrets.AI_API_KEY }}
+          AI_API_URL: ${{ secrets.AI_API_URL }}
+
+      - name: AI Generate Release Note
+        id: ai_release
+        if: steps.ai_check.outputs.available == 'true'
+        continue-on-error: true
+        env:
+          AI_API_KEY: ${{ secrets.AI_API_KEY }}
+          AI_API_URL: ${{ secrets.AI_API_URL }}
+          AI_MODEL: ${{ secrets.AI_MODEL }}
+        run: |
+          CURRENT_TAG="${{ steps.gitlog.outputs.current_tag }}"
+          PREV_TAG="${{ steps.gitlog.outputs.prev_tag }}"
+          COMMITS=$(cat commits.txt)
+          MODEL="${AI_MODEL:-gpt-4o-mini}"
+
+          echo "🤖 使用 AI 生成 Release Note (model: $MODEL)"
+
+          # 获取文件变更统计和代码 diff
+          SUMMARY_LINE=$(git diff --stat "$PREV_TAG"..HEAD | tail -1 || echo "No changes")
+          FILE_CHANGES=$(git diff --stat "$PREV_TAG"..HEAD | head -n -1 | head -30 || echo "")
+          CODE_DIFF=$(git diff "$PREV_TAG"..HEAD -- 'src/*.ts' | head -c 5000 || echo "Diff too large or no code changes")
+
+          # 读取自定义 prompt 模板（如果存在）
+          SYSTEM_PROMPT="你是一个专业的开发者助手，请根据以下 git commit 记录，生成简洁美观的中文 Release Note。要求：1) 使用 Markdown 格式 2) 按功能分类（如新功能、修复、优化等）3) 语言简洁 4) 版本号为 ${CURRENT_TAG}"
+
+          if [ -f ".github/prompt/release_note_prompt.txt" ]; then
+            SYSTEM_PROMPT=$(cat .github/prompt/release_note_prompt.txt)
+          fi
+
           USER_CONTENT="当前版本: $CURRENT_TAG
           上一版本: $PREV_TAG
           日期: $(date +'%Y-%m-%d')
-          
+
           ## 提交列表
           $COMMITS
-          
+
           ## 文件变化统计
           $SUMMARY_LINE
-          
+
           ## 变更文件列表
           $FILE_CHANGES
-          
+
           ## 关键代码变化预览
           \`\`\`diff
           $CODE_DIFF
           \`\`\`"
 
-          BODY=$(jq -n \
+          # 构造请求 JSON
+          PAYLOAD=$(jq -n \
+            --arg model "$MODEL" \
             --arg system "$SYSTEM_PROMPT" \
             --arg user "$USER_CONTENT" \
-            --arg model "$OPENROUTER_MODEL" \
-            '{model: $model, messages:[{role:"system", content:$system},{role:"user", content:$user}], temperature:0.2, max_tokens:1500}')
+            '{
+              model: $model,
+              messages: [
+                { role: "system", content: $system },
+                { role: "user", content: $user }
+              ],
+              temperature: 0.2,
+              max_tokens: 1500
+            }')
 
-          RESPONSE=$(curl -s -X POST "$OPENROUTER_API_URL" \
-            -H "Authorization: Bearer $OPENAI_KEY" \
+          # 调用 API
+          RESPONSE=$(curl -s -w "\n%{http_code}" \
+            --max-time 60 \
             -H "Content-Type: application/json" \
-            -d "$BODY")
+            -H "Authorization: Bearer $AI_API_KEY" \
+            -d "$PAYLOAD" \
+            "$AI_API_URL")
 
-          RELEASE_BODY=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // ""')
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
 
-          if [ -n "$RELEASE_BODY" ] && [ "$RELEASE_BODY" != "null" ]; then
-            echo -e "$RELEASE_BODY" > CHANGELOG.md
-            # 替换占位符
-            sed -i "s/{VERSION}/$CURRENT_TAG/g" CHANGELOG.md
-            sed -i "s/{PREV_VERSION}/$PREV_TAG/g" CHANGELOG.md
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            # 提取 AI 返回内容
+            AI_CONTENT=$(echo "$BODY" | jq -r '.choices[0].message.content // empty')
+            if [ -n "$AI_CONTENT" ]; then
+              echo -e "$AI_CONTENT" > CHANGELOG.md
+              # 替换占位符
+              sed -i "s/{VERSION}/$CURRENT_TAG/g" CHANGELOG.md
+              sed -i "s/{PREV_VERSION}/$PREV_TAG/g" CHANGELOG.md
+              echo "ai_success=true" >> $GITHUB_OUTPUT
+              echo "✅ AI Release Note 生成成功"
+            else
+              echo "⚠️ AI 返回内容为空，将使用默认 Release Note"
+              echo "ai_success=false" >> $GITHUB_OUTPUT
+            fi
           else
-            sed "s/{VERSION}/$CURRENT_TAG/g" .github/prompt/default.md | sed "s/{PREV_VERSION}/$PREV_TAG/g" > CHANGELOG.md
+            echo "⚠️ AI API 请求失败 (HTTP $HTTP_CODE)，将使用默认 Release Note"
+            echo "Response: $BODY"
+            echo "ai_success=false" >> $GITHUB_OUTPUT
           fi
+
+      - name: Fallback Release Note
+        if: steps.ai_release.outputs.ai_success != 'true'
+        run: |
+          CURRENT_TAG="${{ steps.gitlog.outputs.current_tag }}"
+          COMMITS=$(cat commits.txt)
+
+          if [ -f ".github/prompt/default.md" ]; then
+            sed "s/{VERSION}/$CURRENT_TAG/g" .github/prompt/default.md > CHANGELOG.md
+          else
+            echo "## $CURRENT_TAG" > CHANGELOG.md
+            echo "" >> CHANGELOG.md
+            echo "### 更新内容" >> CHANGELOG.md
+            echo "$COMMITS" >> CHANGELOG.md
+          fi
+          echo "📝 使用默认 Release Note"
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -165,112 +243,22 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Update Plugin Index and Create PR
-        env:
-          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
-        run: |
-          set -euo pipefail
-          
-          VERSION="${{ steps.version.outputs.clean_version }}"
-          TAG_VERSION="${{ steps.version.outputs.version }}"
-          PLUGIN_ID="napcat-plugin-puppeteer"
-          INDEX_REPO="NapNeko/napcat-plugin-index"
-          FORK_OWNER="${{ github.repository_owner }}"
-          BRANCH_NAME="update-${PLUGIN_ID}-${TAG_VERSION}"
-          
-          echo "📦 Updating plugin index for ${PLUGIN_ID} to version ${VERSION}"
-          
-          # 配置 git
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          
-          # Fork 仓库（如果已存在会跳过）
-          gh repo fork "${INDEX_REPO}" --clone=false || true
-          
-          # 克隆 fork 的仓库
-          cd ..
-          rm -rf napcat-plugin-index
-          gh repo clone "${FORK_OWNER}/napcat-plugin-index" -- --depth=1
-          cd napcat-plugin-index
-          
-          # 同步上游
-          git remote add upstream "https://github.com/${INDEX_REPO}.git" || true
-          git fetch upstream main
-          git checkout -B "${BRANCH_NAME}" upstream/main
-          
-          # 更新 plugins.v4.json
-          DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${TAG_VERSION}/${PLUGIN_ID}.zip"
-          UPDATE_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-          
-          # 检查插件是否已存在，如果不存在则新建条目
-          PLUGIN_EXISTS=$(jq --arg id "${PLUGIN_ID}" '.plugins | map(select(.id == $id)) | length' plugins.v4.json)
-          
-          if [ "$PLUGIN_EXISTS" -eq 0 ]; then
-            echo "📝 Plugin not found in index, creating new entry..."
-            # 新建插件条目
-            jq --arg id "${PLUGIN_ID}" \
-               --arg version "${VERSION}" \
-               --arg downloadUrl "${DOWNLOAD_URL}" \
-               --arg updateTime "${UPDATE_TIME}" \
-               '
-               .updateTime = $updateTime |
-               .plugins += [{
-                 "id": $id,
-                 "name": "Puppeteer 渲染服务",
-                 "description": "NapCat Puppeteer 渲染服务插件 - 提供 HTML/模板截图渲染 API，供其他插件调用",
-                 "author": "AQiaoYo",
-                 "version": $version,
-                 "downloadUrl": $downloadUrl,
-                 "minVersion": "4.14.13",
-                 "homepage": "https://github.com/AQiaoYo/napcat-plugin-puppeteer"
-               }]
-               ' plugins.v4.json > plugins.v4.json.tmp && mv plugins.v4.json.tmp plugins.v4.json
-          else
-            echo "📝 Plugin found in index, updating..."
-            # 使用 jq 更新版本号和下载链接
-            jq --arg id "${PLUGIN_ID}" \
-               --arg version "${VERSION}" \
-               --arg downloadUrl "${DOWNLOAD_URL}" \
-               --arg updateTime "${UPDATE_TIME}" \
-               '
-               .updateTime = $updateTime |
-               .plugins = [.plugins[] | if .id == $id then .version = $version | .downloadUrl = $downloadUrl else . end]
-               ' plugins.v4.json > plugins.v4.json.tmp && mv plugins.v4.json.tmp plugins.v4.json
-          fi
-          
-          # 检查是否有变化
-          if git diff --quiet plugins.v4.json; then
-            echo "⏭️ No changes detected, skipping PR creation"
-            exit 0
-          fi
-          
-          # 提交并推送
-          git add plugins.v4.json
-          git commit -m "chore(${PLUGIN_ID}): update to ${TAG_VERSION}"
-          git push -f "https://${GH_TOKEN}@github.com/${FORK_OWNER}/napcat-plugin-index.git" "${BRANCH_NAME}"
-          
-          # 创建 PR（如果不存在）
-          PR_TITLE="chore(${PLUGIN_ID}): update to ${TAG_VERSION}"
-          PR_BODY="## 🔄 Plugin Update
-
-          - **Plugin**: ${PLUGIN_ID}
-          - **Version**: ${VERSION}
-          - **Release**: https://github.com/${{ github.repository }}/releases/tag/${TAG_VERSION}
-
-          ---
-          *This PR was automatically created by GitHub Actions.*"
-          
-          # 检查是否已存在 PR
-          EXISTING_PR=$(gh pr list --repo "${INDEX_REPO}" --head "${FORK_OWNER}:${BRANCH_NAME}" --json number --jq '.[0].number' || echo "")
-          
-          if [ -n "$EXISTING_PR" ]; then
-            echo "✅ PR #${EXISTING_PR} already exists, updated branch"
-          else
-            gh pr create \
-              --repo "${INDEX_REPO}" \
-              --head "${FORK_OWNER}:${BRANCH_NAME}" \
-              --base main \
-              --title "${PR_TITLE}" \
-              --body "${PR_BODY}"
-            echo "✅ PR created successfully"
-          fi
+      # 触发索引更新工作流
+      # 注意：默认 GITHUB_TOKEN 创建的 Release 不会触发 on.release 事件
+      # 因此需要手动通过 workflow_dispatch 触发 update-index.yml
+      - name: Trigger index update
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'update-index.yml',
+              ref: 'main',
+              inputs: {
+                version: '${{ steps.version.outputs.version }}'
+              }
+            })
+            console.log('✅ 已触发 update-index.yml 工作流')
