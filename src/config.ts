@@ -79,7 +79,7 @@ export function initConfigUI(ctx: NapCatPluginContext) {
                 </div>
                 <div style="font-size: 13px; color: #4b5563;">
                     更多高级配置（浏览器路径、并发数、视口设置等）请前往 
-                    <a href="#" onclick="document.querySelector('[data-id=\\'napcat-plugin-puppeteer\\'] .plugin-console-btn').click(); return false;" style="color: #fb7299; text-decoration: none; font-weight: 600; transition: opacity 0.2s;">WebUI 控制台</a> 
+                    <a href="/plugin/napcat-plugin-puppeteer/page/puppeteer-dashboard" target="_top" style="color: #fb7299; text-decoration: none; font-weight: 600; transition: opacity 0.2s;">WebUI 控制台</a> 
                     进行管理。
                 </div>
             </div>
