@@ -8,7 +8,6 @@ export interface BrowserStatus {
     mode?: 'local' | 'remote'
     proxy?: {
         server?: string
-        username?: string
         bypassList?: string
     }
     totalRenders: number

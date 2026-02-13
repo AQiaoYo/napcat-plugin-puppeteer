@@ -52,8 +52,8 @@ const defaultSettings = {
     proxyBypassList: '',
 }
 
-export default function SettingsPage() {
-    const [config, setConfig] = useState({
+function getInitialConfig() {
+    return {
         maxPages: defaultSettings.maxPages,
         lockTimeout: defaultSettings.lockTimeout,
         executablePath: '',
@@ -69,7 +69,31 @@ export default function SettingsPage() {
         proxyUsername: '',
         proxyPassword: '',
         proxyBypassList: '',
-    })
+    }
+}
+
+function getResetConfig() {
+    return {
+        maxPages: defaultSettings.maxPages,
+        lockTimeout: defaultSettings.lockTimeout,
+        executablePath: '',
+        browserWSEndpoint: '',
+        browserArgs: '',
+        headless: true,
+        defaultWidth: defaultSettings.defaultWidth,
+        defaultHeight: defaultSettings.defaultHeight,
+        defaultScale: defaultSettings.defaultScale,
+        debug: false,
+        autoStart: defaultSettings.autoStart,
+        proxyServer: '',
+        proxyUsername: '',
+        proxyPassword: '',
+        proxyBypassList: '',
+    }
+}
+
+export default function SettingsPage() {
+    const [config, setConfig] = useState(getInitialConfig())
 
     const [status, setStatus] = useState<ChromeStatus | null>(null)
     const [version, setVersion] = useState('')
@@ -220,23 +244,7 @@ export default function SettingsPage() {
             showToast('正在恢复默认配置...', 'info')
 
             // 设置本地状态为默认值
-            const newConfig = {
-                maxPages: defaultSettings.maxPages,
-                lockTimeout: defaultSettings.lockTimeout,
-                executablePath: '',
-                browserWSEndpoint: '',
-                browserArgs: '',
-                headless: true,
-                defaultWidth: defaultSettings.defaultWidth,
-                defaultHeight: defaultSettings.defaultHeight,
-                defaultScale: defaultSettings.defaultScale,
-                debug: false,
-                autoStart: defaultSettings.autoStart,
-                proxyServer: '',
-                proxyUsername: '',
-                proxyPassword: '',
-                proxyBypassList: '',
-            }
+            const newConfig = getResetConfig()
             setConfig(newConfig)
 
             try {

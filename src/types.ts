@@ -201,8 +201,15 @@ export interface BrowserProxyConfig {
     /**
      * 代理 bypass 列表
      * 逗号分隔的域名列表，这些域名不走代理
-     * 例如: localhost,127.0.0.1,.local
      */
+    bypassList?: string;
+}
+
+/**
+ * 浏览器状态中暴露的代理配置（不含敏感信息）
+ */
+export interface BrowserStatusProxy {
+    server: string;
     bypassList?: string;
 }
 
@@ -308,8 +315,8 @@ export interface BrowserStatus {
     executablePath?: string;
     /** 远程浏览器地址（远程模式） */
     browserWSEndpoint?: string;
-    /** 代理服务器配置 */
-    proxy?: BrowserProxyConfig;
+    /** 代理服务器配置（不含敏感信息） */
+    proxy?: BrowserStatusProxy;
     /** 启动时间 */
     startTime?: number;
     /** 总渲染次数 */
