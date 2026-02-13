@@ -72,6 +72,18 @@ function sanitizeConfig(raw: unknown): PluginConfig {
             browserConfig.deviceScaleFactor = b['deviceScaleFactor'];
         }
 
+        // proxy config
+        const rawProxy = b['proxy'];
+        if (isObject(rawProxy)) {
+            const proxy = rawProxy as Record<string, unknown>;
+            browserConfig.proxy = {
+                server: typeof proxy['server'] === 'string' ? proxy['server'] : undefined,
+                username: typeof proxy['username'] === 'string' ? proxy['username'] : undefined,
+                password: typeof proxy['password'] === 'string' ? proxy['password'] : undefined,
+                bypassList: typeof proxy['bypassList'] === 'string' ? proxy['bypassList'] : undefined,
+            };
+        }
+
         out.browser = browserConfig;
     }
 

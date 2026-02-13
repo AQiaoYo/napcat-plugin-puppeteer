@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Play, ChevronDown, Type } from 'lucide-react'
+import { Play, ChevronDown, Type, Globe } from 'lucide-react'
 import { noAuthFetch } from '../utils/api'
 import { showToast } from '../hooks/useToast'
 import type { RenderOptions } from '../types'
@@ -13,6 +13,14 @@ const defaultHtml = `<html>
   </div>
 </body>
 </html>`
+
+// 预设测试 URL
+const presetUrls = [
+    { label: 'Google 搜索', url: 'https://www.google.com' },
+    { label: 'Google 图片', url: 'https://www.google.com/search?q=cat&tbm=isch' },
+    { label: 'GitHub', url: 'https://github.com' },
+    { label: 'Bing', url: 'https://www.bing.com' },
+]
 
 export default function TestPage() {
     const [testType, setTestType] = useState<'html' | 'url'>('html')
@@ -130,6 +138,30 @@ export default function TestPage() {
                             <option value="url">URL 地址</option>
                         </select>
                     </div>
+
+                    {/* Preset URLs (only for URL type) */}
+                    {testType === 'url' && (
+                        <div>
+                            <label className="text-[10px] font-semibold text-gray-500 uppercase mb-1.5 block tracking-wider flex items-center gap-1">
+                                <Globe size={12} />
+                                快速测试
+                            </label>
+                            <div className="flex flex-wrap gap-2">
+                                {presetUrls.map((preset) => (
+                                    <button
+                                        key={preset.url}
+                                        onClick={() => setContent(preset.url)}
+                                        className="text-xs px-2 py-1.5 bg-gray-100 dark:bg-gray-800 hover:bg-primary hover:text-white dark:hover:bg-primary border border-gray-200 dark:border-gray-700 rounded-md transition-colors"
+                                    >
+                                        {preset.label}
+                                    </button>
+                                ))}
+                            </div>
+                            <p className="text-[10px] text-gray-400 mt-1.5">
+                                点击按钮快速填充 URL，可用于测试代理是否生效
+                            </p>
+                        </div>
+                    )}
 
                     {/* Content */}
                     <div className="flex flex-col">

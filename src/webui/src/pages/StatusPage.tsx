@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Play, RotateCcw, Square, Shield, CheckCircle, XCircle, Globe, Laptop } from 'lucide-react'
+import { Play, RotateCcw, Square, Shield, CheckCircle, XCircle, Globe, Laptop, Lock } from 'lucide-react'
 import type { PluginStatus } from '../types'
 import { authFetch } from '../utils/api'
 import { showToast } from '../hooks/useToast'
@@ -167,6 +167,34 @@ export default function StatusPage({ status, onRefresh }: StatusPageProps) {
                             {browser?.mode === 'remote' ? browser?.browserWSEndpoint : browser?.executablePath || '-'}
                         </span>
                     </div>
+
+                    {/* Proxy Info - Always show */}
+                    <div className="flex justify-between p-3 bg-gray-50 dark:bg-[#1a1b1d] rounded-lg border border-gray-100 dark:border-gray-800">
+                        <span className="text-gray-500 flex items-center gap-1">
+                            <Lock size={12} />
+                            代理服务器
+                        </span>
+                        <span
+                            className={`font-medium truncate font-mono text-xs ${browser?.proxy?.server ? 'text-gray-800 dark:text-gray-200' : 'text-gray-400'}`}
+                            title={browser?.proxy?.server}
+                        >
+                            {browser?.proxy?.server || '未配置'}
+                        </span>
+                    </div>
+                    {browser?.proxy?.server && (
+                        <div className="flex justify-between p-3 bg-gray-50 dark:bg-[#1a1b1d] rounded-lg border border-gray-100 dark:border-gray-800">
+                            <span className="text-gray-500 flex items-center gap-1">
+                                <Globe size={12} />
+                                Bypass 列表
+                            </span>
+                            <span
+                                className="font-medium truncate font-mono text-xs text-gray-800 dark:text-gray-200"
+                                title={browser?.proxy?.bypassList}
+                            >
+                                {browser?.proxy?.bypassList || '-'}
+                            </span>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

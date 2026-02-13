@@ -141,3 +141,5 @@ dist
 # 其他文件
 /.api-docs
 /.example
+
+.idea

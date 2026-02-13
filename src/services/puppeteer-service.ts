@@ -345,12 +345,37 @@ export async function initBrowser(): Promise<boolean> {
 
         pluginState.log('info', `正在启动本地浏览器: ${executablePath}`);
 
-        browser = await puppeteer.launch({
+        // 构建代理配置
+        const launchOptions: any = {
             executablePath,
             headless: config.headless !== false,
             args: getBrowserArgs(config),
             defaultViewport: getDefaultViewport(config),
-        });
+        };
+
+        // 应用代理配置（仅本地模式有效）
+        if (config.proxy?.server) {
+            const proxyServer = config.proxy.server;
+            pluginState.log('info', `配置代理服务器: ${proxyServer}`);
+
+            // 过滤可能存在的冲突代理参数
+            const existingArgs = launchOptions.args || [];
+            const filteredArgs = existingArgs.filter(
+                (arg: string) => !arg.startsWith('--proxy-')
+            );
+
+            launchOptions.args = [
+                `--proxy-server=${proxyServer}`,
+                ...filteredArgs,
+            ];
+
+            // 添加代理 bypass 列表
+            if (config.proxy.bypassList) {
+                launchOptions.args.push(`--proxy-bypass-list=${config.proxy.bypassList}`);
+            }
+        }
+
+        browser = await puppeteer.launch(launchOptions);
 
         // 监听浏览器关闭事件
         setupDisconnectHandler();
@@ -419,6 +444,20 @@ export async function restartBrowser(): Promise<boolean> {
 }
 
 /**
+ * 构建代理状态对象（用于 BrowserStatus）
+ * 只暴露 server 和 bypassList，不暴露 username 以减少敏感信息暴露
+ */
+function buildProxyStatus(proxyConfig?: { server?: string; bypassList?: string }): { server: string; bypassList?: string } | undefined {
+    if (!proxyConfig?.server) {
+        return undefined;
+    }
+    return {
+        server: proxyConfig.server,
+        bypassList: proxyConfig.bypassList,
+    };
+}
+
+/**
  * 获取浏览器状态
  */
 export async function getBrowserStatus(): Promise<BrowserStatus> {
@@ -426,6 +465,7 @@ export async function getBrowserStatus(): Promise<BrowserStatus> {
 
     const config = pluginState.config.browser;
     const isRemoteMode = !!config.browserWSEndpoint;
+    const proxyStatus = buildProxyStatus(config.proxy);
 
     if (!browser) {
         pluginState.logDebug('浏览器未连接');
@@ -435,6 +475,7 @@ export async function getBrowserStatus(): Promise<BrowserStatus> {
             pageCount: 0,
             executablePath: isRemoteMode ? undefined : findBrowserPath(config.executablePath, true),
             browserWSEndpoint: isRemoteMode ? config.browserWSEndpoint : undefined,
+            proxy: proxyStatus,
             totalRenders: stats.totalRenders,
             failedRenders: stats.failedRenders,
         };
@@ -451,6 +492,7 @@ export async function getBrowserStatus(): Promise<BrowserStatus> {
             pageCount: pages.length,
             executablePath: isRemoteMode ? undefined : findBrowserPath(config.executablePath, true),
             browserWSEndpoint: isRemoteMode ? config.browserWSEndpoint : undefined,
+            proxy: proxyStatus,
             startTime: stats.startTime,
             totalRenders: stats.totalRenders,
             failedRenders: stats.failedRenders,
@@ -460,6 +502,7 @@ export async function getBrowserStatus(): Promise<BrowserStatus> {
             connected: false,
             mode: isRemoteMode ? 'remote' : 'local',
             pageCount: 0,
+            proxy: proxyStatus,
             totalRenders: stats.totalRenders,
             failedRenders: stats.failedRenders,
         };
@@ -490,6 +533,16 @@ async function acquirePage(): Promise<Page> {
     }
 
     const page = await browser.newPage();
+
+    // 应用代理认证（仅本地模式有效，远程模式由远程浏览器处理）
+    const config = pluginState.config.browser;
+    if (config.proxy?.server && config.proxy.username && config.proxy.password && !config.browserWSEndpoint) {
+        await page.authenticate({
+            username: config.proxy.username,
+            password: config.proxy.password,
+        });
+    }
+
     return page;
 }
 

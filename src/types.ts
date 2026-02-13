@@ -178,6 +178,42 @@ export interface RenderResult<T extends Encoding = 'base64', M extends MultiPage
 // ==================== 浏览器配置 ====================
 
 /**
+ * 浏览器代理配置
+ */
+export interface BrowserProxyConfig {
+    /**
+     * 代理服务器地址
+     * 格式: protocol://host:port
+     * 例如: http://127.0.0.1:7890, socks5://127.0.0.1:1080
+     */
+    server?: string;
+
+    /**
+     * 代理用户名（可选，用于认证代理）
+     */
+    username?: string;
+
+    /**
+     * 代理密码（可选，用于认证代理）
+     */
+    password?: string;
+
+    /**
+     * 代理 bypass 列表
+     * 逗号分隔的域名列表，这些域名不走代理
+     */
+    bypassList?: string;
+}
+
+/**
+ * 浏览器状态中暴露的代理配置（不含敏感信息）
+ */
+export interface BrowserStatusProxy {
+    server: string;
+    bypassList?: string;
+}
+
+/**
  * 浏览器启动配置
  */
 export interface BrowserConfig {
@@ -206,6 +242,13 @@ export interface BrowserConfig {
      * 浏览器启动参数
      */
     args?: string[];
+
+    /**
+     * 代理服务器配置
+     * 用于国内机器访问国外网站时走代理
+     * 注意：远程模式（browserWSEndpoint）下此配置不生效
+     */
+    proxy?: BrowserProxyConfig;
 
     /**
      * 最大并发页面数
@@ -272,6 +315,8 @@ export interface BrowserStatus {
     executablePath?: string;
     /** 远程浏览器地址（远程模式） */
     browserWSEndpoint?: string;
+    /** 代理服务器配置（不含敏感信息） */
+    proxy?: BrowserStatusProxy;
     /** 启动时间 */
     startTime?: number;
     /** 总渲染次数 */
